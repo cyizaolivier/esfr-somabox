@@ -3,6 +3,7 @@ import { Routes, Route, Navigate } from 'react-router-dom'
 import SignIn from './pages/SignIn'
 import SignUp from './pages/SignUp'
 import Dashboard from './pages/Dashboard'
+import { Library, Programs, Messages, Settings } from './pages/SubPages'
 import { AuthProvider, useAuth } from './auth'
 
 function PrivateRoute({ children }: { children: JSX.Element }) {
@@ -25,8 +26,41 @@ export default function App() {
             </PrivateRoute>
           }
         />
+        <Route
+          path="/library"
+          element={
+            <PrivateRoute>
+              <Library />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/programs"
+          element={
+            <PrivateRoute>
+              <Programs />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/messages"
+          element={
+            <PrivateRoute>
+              <Messages />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/settings"
+          element={
+            <PrivateRoute>
+              <Settings />
+            </PrivateRoute>
+          }
+        />
         <Route path="/" element={<Navigate to="/signin" replace />} />
       </Routes>
     </AuthProvider>
   )
 }
+
