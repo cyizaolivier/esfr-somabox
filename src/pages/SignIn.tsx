@@ -1,11 +1,12 @@
 import React, { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { useAuth } from '../auth'
-import { Eye, EyeOff } from 'lucide-react'
+import { useAuth, UserRole } from '../auth'
+import { Eye, EyeOff, User, Shield, Briefcase } from 'lucide-react'
 
 export default function SignIn() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [role, setRole] = useState<UserRole>('Student')
   const [showPassword, setShowPassword] = useState(false)
   const [loading, setLoading] = useState(false)
   const auth = useAuth()
@@ -15,12 +16,20 @@ export default function SignIn() {
     e.preventDefault()
     setLoading(true)
     try {
-      await auth.signIn(email, password)
-      nav('/dashboard')
+      await auth.signIn(email, password, role)
+      if (role === 'Admin') nav('/admin/dashboard')
+      else if (role === 'Facilitator') nav('/facilitator/dashboard')
+      else nav('/dashboard')
     } finally {
       setLoading(false)
     }
   }
+
+  const roleOptions = [
+    { id: 'Student' as UserRole, label: 'Student', icon: User },
+    { id: 'Facilitator' as UserRole, label: 'Facilitator', icon: Briefcase },
+    { id: 'Admin' as UserRole, label: 'Admin', icon: Shield },
+  ]
 
   return (
     <div className="min-h-screen flex">
@@ -32,7 +41,6 @@ export default function SignIn() {
           className="absolute inset-0 w-full h-full object-cover opacity-60 mix-blend-overlay"
         />
         <div className="relative z-10 p-16 flex flex-col justify-between h-full text-white">
-          {/* Logo */}
           <div className="flex items-center gap-3 mb-24">
             <div className="w-10 h-10 flex items-center justify-center">
                 <svg viewBox="0 0 40 40" className="w-8 h-8 fill-white">
@@ -57,21 +65,13 @@ export default function SignIn() {
             </p>
 
             <div className="grid grid-cols-2 gap-4">
-              <div className="bg-white/10 backdrop-blur-md p-4 rounded-xl border border-white/10">
+              <div className="bg-white/10 backdrop-blur-md p-4 rounded-xl border border-white/10 text-left">
                 <div className="text-2xl font-bold">500+</div>
                 <div className="text-sm opacity-70">Courses</div>
               </div>
-              <div className="bg-white/10 backdrop-blur-md p-4 rounded-xl border border-white/10">
+              <div className="bg-white/10 backdrop-blur-md p-4 rounded-xl border border-white/10 text-left">
                 <div className="text-2xl font-bold">10,000+</div>
                 <div className="text-sm opacity-70">Students</div>
-              </div>
-              <div className="bg-white/10 backdrop-blur-md p-4 rounded-xl border border-white/10">
-                <div className="text-2xl font-bold">100+</div>
-                <div className="text-sm opacity-70">Schools</div>
-              </div>
-              <div className="bg-white/10 backdrop-blur-md p-4 rounded-xl border border-white/10">
-                <div className="text-2xl font-bold">95%</div>
-                <div className="text-sm opacity-70">Success Rate</div>
               </div>
             </div>
           </div>
@@ -83,18 +83,36 @@ export default function SignIn() {
       </div>
 
       {/* Right Column - Form */}
-      <div className="w-full lg:w-1/2 flex items-center justify-center p-8 bg-white">
-        <div className="max-w-md w-full">
+      <div className="w-full lg:w-1/2 flex items-center justify-center p-8 bg-white overflow-y-auto">
+        <div className="max-w-md w-full py-12">
           <div className="mb-10 text-center lg:text-left">
             <h2 className="text-4xl font-bold text-gray-900 mb-2">Sign In</h2>
-            <p className="text-gray-500">Sign In to the learning platform</p>
+            <p className="text-gray-500">Choose your role and sign in</p>
           </div>
 
           <form onSubmit={submit} className="space-y-6">
+            <div className="grid grid-cols-3 gap-3 mb-8">
+              {roleOptions.map((opt) => (
+                <button
+                  key={opt.id}
+                  type="button"
+                  onClick={() => setRole(opt.id)}
+                  className={`flex flex-col items-center gap-2 p-3 rounded-xl border-2 transition-all ${
+                    role === opt.id 
+                      ? 'border-[#004D7A] bg-[#004D7A]/5 text-[#004D7A]' 
+                      : 'border-gray-100 text-gray-400 hover:border-gray-200'
+                  }`}
+                >
+                  <opt.icon size={20} />
+                  <span className="text-xs font-bold">{opt.label}</span>
+                </button>
+              ))}
+            </div>
+
             <div>
               <label className="block text-sm font-semibold text-gray-700 mb-2">Email</label>
               <input
-                className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-[#004D7A]/20 transition-all"
+                className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-[#004D7A]/20 transition-all font-medium"
                 placeholder="Enter your email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
@@ -106,7 +124,7 @@ export default function SignIn() {
               <label className="block text-sm font-semibold text-gray-700 mb-2">Password</label>
               <div className="relative">
                 <input
-                  className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-[#004D7A]/20 transition-all"
+                  className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-[#004D7A]/20 transition-all font-medium"
                   placeholder="Enter your password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
@@ -126,7 +144,7 @@ export default function SignIn() {
             <div className="flex items-center justify-between text-sm">
               <label className="flex items-center gap-2 cursor-pointer">
                 <input type="checkbox" className="rounded text-[#004D7A] focus:ring-[#004D7A]" />
-                <span className="text-gray-600">Remember me</span>
+                <span className="text-gray-600 font-medium">Remember me</span>
               </label>
               <a href="#" className="text-[#004D7A] font-semibold hover:underline">Forgot Password?</a>
             </div>
@@ -136,11 +154,11 @@ export default function SignIn() {
               className="w-full bg-[#004D7A] text-white py-3 rounded-xl font-bold hover:bg-[#003B5C] transition-all shadow-lg shadow-[#004D7A]/20 disabled:opacity-70"
               disabled={loading}
             >
-              {loading ? 'Signing in...' : 'Sign In'}
+              {loading ? 'Signing in...' : `Sign In as ${role}`}
             </button>
           </form>
 
-          <p className="mt-8 text-center text-gray-600">
+          <p className="mt-8 text-center text-gray-600 font-medium">
             Don't have an account? <Link className="text-[#004D7A] font-bold hover:underline" to="/signup">Sign up Here</Link>
           </p>
         </div>

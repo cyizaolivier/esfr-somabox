@@ -3,12 +3,26 @@ import { Routes, Route, Navigate } from 'react-router-dom'
 import SignIn from './pages/SignIn'
 import SignUp from './pages/SignUp'
 import Dashboard from './pages/Dashboard'
+import { AdminDashboard } from './pages/AdminDashboard'
+import { FacilitatorDashboard } from './pages/FacilitatorDashboard'
 import { Library, Programs, Messages, Settings } from './pages/SubPages'
-import { AuthProvider, useAuth } from './auth'
+import { AuthProvider, useAuth, UserRole } from './auth'
 
 function PrivateRoute({ children }: { children: JSX.Element }) {
   const { user } = useAuth()
   if (!user) return <Navigate to="/signin" replace />
+  return children
+}
+
+function RoleRoute({ children, allowedRoles }: { children: JSX.Element, allowedRoles?: UserRole[] }) {
+  const { user } = useAuth()
+  if (!user) return <Navigate to="/signin" replace />
+  if (allowedRoles && !allowedRoles.includes(user.role)) {
+    // Redirect to their respective home if they try to access a forbidden role page
+    if (user.role === 'Admin') return <Navigate to="/admin/dashboard" replace />
+    if (user.role === 'Facilitator') return <Navigate to="/facilitator/dashboard" replace />
+    return <Navigate to="/dashboard" replace />
+  }
   return children
 }
 
@@ -18,38 +32,86 @@ export default function App() {
       <Routes>
         <Route path="/signin" element={<SignIn />} />
         <Route path="/signup" element={<SignUp />} />
+
+        {/* Student Routes */}
         <Route
           path="/dashboard"
           element={
-            <PrivateRoute>
+            <RoleRoute allowedRoles={['Student']}>
               <Dashboard />
-            </PrivateRoute>
+            </RoleRoute>
           }
         />
         <Route
           path="/library"
           element={
-            <PrivateRoute>
+            <RoleRoute allowedRoles={['Student']}>
               <Library />
-            </PrivateRoute>
+            </RoleRoute>
           }
         />
         <Route
           path="/programs"
           element={
-            <PrivateRoute>
+            <RoleRoute allowedRoles={['Student']}>
               <Programs />
-            </PrivateRoute>
+            </RoleRoute>
           }
         />
         <Route
           path="/messages"
           element={
-            <PrivateRoute>
+            <RoleRoute allowedRoles={['Student']}>
               <Messages />
-            </PrivateRoute>
+            </RoleRoute>
           }
         />
+
+        {/* Facilitator Routes */}
+        <Route
+          path="/facilitator/dashboard"
+          element={
+            <RoleRoute allowedRoles={['Facilitator']}>
+              <FacilitatorDashboard />
+            </RoleRoute>
+          }
+        />
+        <Route
+          path="/facilitator/courses"
+          element={
+            <RoleRoute allowedRoles={['Facilitator']}>
+              <FacilitatorDashboard />
+            </RoleRoute>
+          }
+        />
+
+        {/* Admin Routes */}
+        <Route
+          path="/admin/dashboard"
+          element={
+            <RoleRoute allowedRoles={['Admin']}>
+              <AdminDashboard />
+            </RoleRoute>
+          }
+        />
+        <Route
+          path="/admin/add-facilitator"
+          element={
+            <RoleRoute allowedRoles={['Admin']}>
+              <AdminDashboard />
+            </RoleRoute>
+          }
+        />
+        <Route
+          path="/admin/add-admin"
+          element={
+            <RoleRoute allowedRoles={['Admin']}>
+              <AdminDashboard />
+            </RoleRoute>
+          }
+        />
+
+        {/* Shared Routes */}
         <Route
           path="/settings"
           element={
@@ -58,7 +120,9 @@ export default function App() {
             </PrivateRoute>
           }
         />
-        <Route path="/" element={<Navigate to="/signin" replace />} />
+
+        <Route path="/" element={<Navigate to="/dashboard" replace />} />
+        <Route path="*" element={<Navigate to="/dashboard" replace />} />
       </Routes>
     </AuthProvider>
   )

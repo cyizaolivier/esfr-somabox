@@ -1,5 +1,6 @@
 import React from 'react'
 import Sidebar from '../components/Sidebar'
+import DashboardLayout from '../components/DashboardLayout'
 import { Book, Bookmark, Folder, Search, User, Shield, Bell, HardDrive, PlayCircle, ChevronRight, ArrowLeft, Mail, Download, MoreHorizontal, Paperclip, Send, Menu } from 'lucide-react'
 import rwandanProgramImg from '../assets/Rwandan program.jpg'
 import internationalProgramImg from '../assets/international program.jpg'
@@ -9,47 +10,7 @@ import primaryStudentsImg from '../assets/primary students.jpg'
 import secondaryStudentsImg from '../assets/secondary students.jpg'
 import universityStudentsImg from '../assets/University students.jpg'
 
-const Layout = ({ title, children }: { title: string, children: React.ReactNode }) => {
-  const [isSidebarOpen, setIsSidebarOpen] = React.useState(false);
-
-  return (
-    <div className="flex min-h-screen bg-[#F0F4F8]">
-      <Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} />
-      <main className="flex-1 p-4 md:p-8 overflow-y-auto max-h-screen w-full">
-        <div className="flex items-center justify-between mb-8 gap-4">
-          <div className="flex items-center gap-4">
-            <button 
-              onClick={() => setIsSidebarOpen(true)}
-              className="lg:hidden p-2 text-gray-600 hover:bg-white/50 rounded-xl transition-colors"
-            >
-              <Menu size={24} />
-            </button>
-            <h1 className="text-2xl md:text-3xl font-bold text-gray-900 truncate">{title}</h1>
-          </div>
-          
-          <div className="flex items-center gap-3 md:gap-6">
-              <div className="flex items-center gap-2 md:gap-4 text-gray-400">
-                  <button className="hover:text-gray-600 transition-colors p-1"><Bell size={22} /></button>
-                  <button className="hover:text-gray-600 transition-colors p-1"><Mail size={22} /></button>
-              </div>
-              <div className="flex items-center gap-2 md:gap-3 pl-2 md:pl-6 border-l border-gray-200 lg:border-none">
-                <div className="text-right hidden sm:block">
-                  <div className="text-xs md:text-sm font-bold text-gray-900 leading-none">Swetha shankaresh</div>
-                  <div className="text-[10px] text-gray-400 font-bold uppercase mt-1">Student</div>
-                </div>
-                <div className="w-8 h-8 md:w-10 md:h-10 rounded-full bg-gray-200 border-2 border-white shadow-sm overflow-hidden flex-shrink-0">
-                    <img src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&q=80&w=150" alt="avatar" />
-                </div>
-              </div>
-          </div>
-        </div>
-        <div className="bg-white rounded-[1.5rem] md:rounded-[2rem] shadow-sm border border-gray-100 min-h-[calc(100vh-10rem)] p-6 md:p-8">
-          {children}
-        </div>
-      </main>
-    </div>
-  )
-}
+const Layout = DashboardLayout;
 
 export const Library = () => (
     <Layout title="Library">

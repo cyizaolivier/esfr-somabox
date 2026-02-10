@@ -7,7 +7,10 @@ import {
   MessageSquare, 
   Settings, 
   LogOut,
-  X
+  X,
+  UserPlus,
+  ShieldPlus,
+  BookMarked
 } from 'lucide-react';
 import { useAuth } from '../auth';
 
@@ -17,7 +20,7 @@ interface SidebarProps {
 }
 
 const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
-  const { signOut } = useAuth();
+  const { user, signOut } = useAuth();
   const navigate = useNavigate();
 
   const handleLogout = () => {
@@ -25,13 +28,35 @@ const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
     navigate('/signin');
   };
 
-  const navItems = [
-    { icon: LayoutDashboard, label: 'Dashboard', path: '/dashboard' },
-    { icon: Library, label: 'Library', path: '/library' },
-    { icon: BookOpen, label: 'Programs', path: '/programs' },
-    { icon: MessageSquare, label: 'Messages', path: '/messages' },
-    { icon: Settings, label: 'Settings', path: '/settings' },
-  ];
+  const role = user?.role || 'Student';
+
+  const getNavItems = () => {
+    switch (role) {
+      case 'Admin':
+        return [
+          { icon: LayoutDashboard, label: 'Dashboard', path: '/admin/dashboard' },
+          { icon: UserPlus, label: 'Add Facilitator', path: '/admin/add-facilitator' },
+          { icon: ShieldPlus, label: 'Add Admin', path: '/admin/add-admin' },
+          { icon: Settings, label: 'Settings', path: '/settings' },
+        ];
+      case 'Facilitator':
+        return [
+          { icon: LayoutDashboard, label: 'Dashboard', path: '/facilitator/dashboard' },
+          { icon: BookMarked, label: 'Courses', path: '/facilitator/courses' },
+          { icon: Settings, label: 'Settings', path: '/settings' },
+        ];
+      default:
+        return [
+          { icon: LayoutDashboard, label: 'Dashboard', path: '/dashboard' },
+          { icon: Library, label: 'Library', path: '/library' },
+          { icon: BookOpen, label: 'Programs', path: '/programs' },
+          { icon: MessageSquare, label: 'Messages', path: '/messages' },
+          { icon: Settings, label: 'Settings', path: '/settings' },
+        ];
+    }
+  };
+
+  const navItems = getNavItems();
 
   return (
     <>
@@ -86,7 +111,7 @@ const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
               }
             >
               <item.icon size={20} />
-              <span>{item.label}</span>
+              <span className="truncate">{item.label}</span>
             </NavLink>
           ))}
         </nav>

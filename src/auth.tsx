@@ -1,10 +1,12 @@
 import React, { createContext, useContext, useState } from 'react'
 
-type User = { email: string } | null
+export type UserRole = 'Student' | 'Facilitator' | 'Admin'
+
+type User = { email: string; role: UserRole } | null
 
 type AuthContext = {
   user: User
-  signIn: (email: string, password: string) => Promise<void>
+  signIn: (email: string, password: string, role: UserRole) => Promise<void>
   signUp: (email: string, password: string) => Promise<void>
   signOut: () => void
 }
@@ -12,20 +14,30 @@ type AuthContext = {
 const AuthContext = createContext<AuthContext | undefined>(undefined)
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [user, setUser] = useState<User>(null)
+  const [user, setUser] = useState<User>(() => {
+    const saved = localStorage.getItem('soma_auth');
+    return saved ? JSON.parse(saved) : null;
+  })
 
-  const signIn = async (email: string) => {
+  const signIn = async (email: string, _password: string, role: UserRole) => {
     // mock delay
     await new Promise((r) => setTimeout(r, 400))
-    setUser({ email })
+    const userData = { email, role };
+    setUser(userData)
+    localStorage.setItem('soma_auth', JSON.stringify(userData));
   }
 
   const signUp = async (email: string) => {
     await new Promise((r) => setTimeout(r, 400))
-    setUser({ email })
+    const userData = { email, role: 'Student' as UserRole };
+    setUser(userData)
+    localStorage.setItem('soma_auth', JSON.stringify(userData));
   }
 
-  const signOut = () => setUser(null)
+  const signOut = () => {
+    setUser(null)
+    localStorage.removeItem('soma_auth');
+  }
 
   return (
     <AuthContext.Provider value={{ user, signIn, signUp, signOut }}>
