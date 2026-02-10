@@ -24,7 +24,7 @@ const Sidebar = () => {
     { icon: Library, label: 'Library', path: '/library' },
     { icon: BookOpen, label: 'Programs', path: '/programs' },
     { icon: MessageSquare, label: 'Messages', path: '/messages' },
-    { icon: Settings, label: 'Setting', path: '/settings' },
+    { icon: Settings, label: 'Settings', path: '/settings' },
   ];
 
   return (
