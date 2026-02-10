@@ -29,7 +29,7 @@ export default function SignIn() {
         <img 
           src="https://images.unsplash.com/photo-1522202176988-66273c2fd55f?auto=format&fit=crop&q=80&w=1000" 
           alt="Students studying"
-          className="absolute inset-0 w-full h-full object-cover opacity-30 mix-blend-overlay"
+          className="absolute inset-0 w-full h-full object-cover opacity-60 mix-blend-overlay"
         />
         <div className="relative z-10 p-16 flex flex-col justify-between h-full text-white">
           {/* Logo */}
