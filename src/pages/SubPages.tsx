@@ -1,6 +1,6 @@
 import React from 'react'
 import Sidebar from '../components/Sidebar'
-import { Book, Bookmark, Folder, Search, User, Shield, Bell, HardDrive, PlayCircle, ChevronRight, ArrowLeft, Mail, Download } from 'lucide-react'
+import { Book, Bookmark, Folder, Search, User, Shield, Bell, HardDrive, PlayCircle, ChevronRight, ArrowLeft, Mail, Download, MoreHorizontal, Paperclip, Send } from 'lucide-react'
 import rwandanProgramImg from '../assets/Rwandan program.jpg'
 import internationalProgramImg from '../assets/international program.jpg'
 import otherSchoolContentsImg from '../assets/other school contents.jpg'
@@ -217,41 +217,115 @@ export const Programs = () => {
     );
 };
 
-export const Messages = () => (
-    <Layout title="Messages">
-        <div className="flex gap-8 h-[calc(100vh-20rem)]">
-            <div className="w-80 border-r border-gray-100 pr-8 space-y-4 overflow-y-auto">
-                {[
-                    { name: 'Dr. Sarah Johnson', lastMsg: 'Your latest assignment looks great!', time: '12:45 PM', active: true, unread: 2 },
-                    { name: 'Michael Chen', lastMsg: 'Did you check the React docs?', time: 'Yesterday', active: false, unread: 0 },
-                    { name: 'UI/UX Community', lastMsg: 'Welcome new members! 👋', time: 'Monday', active: false, unread: 0 }
-                ].map((chat, i) => (
-                    <div key={i} className={`p-4 rounded-2xl cursor-pointer transition-all ${chat.active ? 'bg-[#004D7A] text-white' : 'hover:bg-gray-50'}`}>
-                        <div className="flex items-center justify-between mb-1">
-                            <h4 className="font-bold text-sm truncate pr-2">{chat.name}</h4>
-                            <span className={`text-[10px] ${chat.active ? 'text-white/60' : 'text-gray-400'}`}>{chat.time}</span>
-                        </div>
-                        <div className="flex items-center justify-between">
-                            <p className={`text-xs truncate ${chat.active ? 'text-white/80' : 'text-gray-500'}`}>{chat.lastMsg}</p>
-                            {chat.unread > 0 && (
-                                <span className="w-4 h-4 bg-[#F4A261] text-white text-[10px] flex items-center justify-center rounded-full font-bold">
-                                    {chat.unread}
-                                </span>
-                            )}
+export const Messages = () => {
+    const [selectedChat, setSelectedChat] = React.useState(0);
+    const contacts = [
+        { id: 0, name: 'Robin smith', msg: 'Done', time: '1d', avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&q=80&w=100' },
+        { id: 1, name: 'Arun Kumar', msg: 'Nope', time: '1d', avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&q=80&w=100' },
+        { id: 2, name: 'Amit kumar', msg: 'Happy Birthday', time: '1d', avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=crop&q=80&w=100' },
+        { id: 3, name: 'Abishek kumar', msg: 'When is exam?', time: '1d', avatar: 'https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?auto=format&fit=crop&q=80&w=100' },
+        { id: 4, name: 'Bivesh kumar', msg: 'Hello', time: '2d', avatar: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&q=80&w=100' },
+        { id: 5, name: 'Clara john', msg: 'Chemistry test', time: '2d', avatar: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?auto=format&fit=crop&q=80&w=100' },
+        { id: 6, name: 'Deepthi manohar', msg: 'I have completed', time: '2d', avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&q=80&w=100' },
+    ];
+
+    return (
+        <Layout title="Messages">
+            <div className="flex gap-6 h-[calc(100vh-16rem)]">
+                {/* Left Panel: Contacts */}
+                <div className="w-80 bg-white rounded-3xl border border-gray-100 flex flex-col overflow-hidden shadow-sm">
+                    <div className="p-4 border-b border-gray-50">
+                        <div className="relative">
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
+                            <input 
+                                placeholder="Search" 
+                                className="w-full pl-10 pr-4 py-2 bg-gray-50 border-none rounded-xl text-sm outline-none focus:ring-2 focus:ring-[#3B82F6]/20" 
+                            />
                         </div>
                     </div>
-                ))}
-            </div>
-            <div className="flex-1 flex flex-col items-center justify-center text-center opacity-50">
-                <div className="w-20 h-20 bg-gray-100 rounded-3xl flex items-center justify-center text-gray-400 mb-6 font-bold">
-                    <Bookmark size={40} />
+                    <div className="flex border-b border-gray-50 text-xs font-bold text-gray-400">
+                        <button className="flex-1 py-3 text-[#111827] border-b-2 border-[#111827]">Chat</button>
+                        <button className="flex-1 py-3 hover:text-gray-600 transition-colors">Groups</button>
+                    </div>
+                    <div className="flex-1 overflow-y-auto">
+                        {contacts.map((contact, i) => (
+                            <div 
+                                key={contact.id} 
+                                onClick={() => setSelectedChat(i)}
+                                className={`flex items-center gap-3 p-4 border-b border-gray-50 cursor-pointer transition-colors ${selectedChat === i ? 'bg-blue-50/50' : 'hover:bg-gray-50'}`}
+                            >
+                                <img src={contact.avatar} className="w-10 h-10 rounded-full object-cover" alt={contact.name} />
+                                <div className="flex-1 min-w-0">
+                                    <h4 className="text-sm font-bold text-gray-900 truncate">{contact.name}</h4>
+                                    <p className="text-xs text-gray-400 truncate">{contact.msg}</p>
+                                </div>
+                                <span className="text-[10px] font-bold text-gray-400">{contact.time}</span>
+                            </div>
+                        ))}
+                    </div>
                 </div>
-                <h3 className="text-xl font-bold text-gray-900 mb-2">Select a conversation</h3>
-                <p className="max-w-xs text-sm text-gray-500">Choose a contact to start messaging your instructors or classmates.</p>
+
+                {/* Right Panel: Chat Detail */}
+                <div className="flex-1 bg-white rounded-3xl border border-gray-100 flex flex-col overflow-hidden shadow-sm">
+                    {/* Chat Header */}
+                    <div className="p-4 border-b border-gray-50 flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                            <div className="relative">
+                                <img src={contacts[selectedChat].avatar} className="w-10 h-10 rounded-full object-cover" alt="avatar" />
+                                <div className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-green-500 border-2 border-white rounded-full"></div>
+                            </div>
+                            <div>
+                                <h3 className="text-sm font-bold text-gray-900 leading-none mb-1">{contacts[selectedChat].name}</h3>
+                                <p className="text-[11px] text-gray-400">Online . Last seen 3.00 pm</p>
+                            </div>
+                        </div>
+                        <button className="p-2 text-gray-400 hover:text-gray-600">
+                            <MoreHorizontal size={20} />
+                        </button>
+                    </div>
+
+                    {/* Chat Area */}
+                    <div className="flex-1 p-6 overflow-y-auto space-y-6 bg-gray-50/30">
+                        <div className="flex items-start gap-3">
+                            <img src={contacts[selectedChat].avatar} className="w-8 h-8 rounded-full border border-gray-100" />
+                            <div className="bg-gray-200 text-gray-800 p-3 rounded-2xl rounded-tl-none text-sm max-w-md shadow-sm">
+                                Hey There?
+                            </div>
+                        </div>
+                        <div className="flex items-start gap-3 justify-end">
+                            <div className="bg-[#2D2DAA] text-white p-3 rounded-2xl rounded-tr-none text-sm max-w-md shadow-md">
+                                Hello!
+                            </div>
+                            <img src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&q=80&w=100" className="w-8 h-8 rounded-full border border-white" />
+                        </div>
+                        <div className="flex items-start gap-3">
+                            <img src={contacts[selectedChat].avatar} className="w-8 h-8 rounded-full border border-gray-100" />
+                            <div className="bg-gray-200 text-gray-800 p-3 rounded-2xl rounded-tl-none text-sm max-w-md shadow-sm">
+                                I am fine and how are you?
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Chat Input */}
+                    <div className="p-4 border-t border-gray-50 flex items-center gap-4">
+                        <button className="p-2 text-gray-400 hover:text-gray-600 bg-gray-100 rounded-xl">
+                            <Paperclip size={20} className="rotate-45" />
+                        </button>
+                        <div className="flex-1 relative">
+                            <input 
+                                placeholder="Type a message..." 
+                                className="w-full px-4 py-3 bg-white border border-gray-100 rounded-2xl text-sm outline-none focus:border-blue-400 transition-all font-medium pr-12" 
+                            />
+                            <button className="absolute right-2 top-1/2 -translate-y-1/2 p-2 bg-blue-500 text-white rounded-xl hover:bg-blue-600 transition-colors shadow-sm">
+                                <Send size={18} />
+                            </button>
+                        </div>
+                    </div>
+                </div>
             </div>
-        </div>
-    </Layout>
-)
+        </Layout>
+    );
+};
 export const Settings = () => (
     <Layout title="Settings">
         <div className="max-w-2xl">
