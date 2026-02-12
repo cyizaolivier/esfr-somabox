@@ -20,7 +20,7 @@ export const Library = () => (
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
             <input 
                 placeholder="Search" 
-                className="w-full max-w-xl pl-11 pr-4 py-2.5 md:py-3 bg-[#F8FAFC] border border-transparent rounded-2xl text-sm outline-none focus:bg-white focus:border-gray-200 transition-all font-medium" 
+                className="w-full max-w-xl pl-11 pr-4 py-2.5 md:py-3 bg-primary-surface/60 border border-primary/5 rounded-2xl text-sm outline-none focus:bg-white focus:border-primary/20 transition-all font-medium" 
             />
         </div>
 
@@ -41,7 +41,7 @@ export const Library = () => (
                     </div>
                     <div className="flex items-center justify-between px-1">
                         <span className="text-xs md:text-sm font-bold text-gray-700 truncate mr-2">{book.name}</span>
-                        <button className="text-[#004D7A] hover:scale-110 transition-transform flex-shrink-0">
+                        <button className="text-primary hover:scale-110 transition-transform flex-shrink-0">
                             <Download size={18} />
                         </button>
                     </div>
@@ -134,7 +134,7 @@ export const Programs = () => {
                 <div className="flex items-center gap-2 overflow-x-auto no-scrollbar py-1">
                     <button 
                         onClick={() => setPath([])} 
-                        className={`text-sm font-bold whitespace-nowrap ${path.length === 0 ? 'text-[#004D7A]' : 'text-gray-400 hover:text-gray-600'}`}
+                        className={`text-sm font-bold whitespace-nowrap ${path.length === 0 ? 'text-primary' : 'text-gray-400 hover:text-gray-600'}`}
                     >
                         Programs
                     </button>
@@ -143,7 +143,7 @@ export const Programs = () => {
                             <ChevronRight size={14} className="text-gray-300 flex-shrink-0" />
                             <button 
                                 onClick={() => setPath([path[0]])} 
-                                className={`text-sm font-bold whitespace-nowrap ${path.length === 1 ? 'text-[#004D7A]' : 'text-gray-400 hover:text-gray-600'}`}
+                                className={`text-sm font-bold whitespace-nowrap ${path.length === 1 ? 'text-primary' : 'text-gray-400 hover:text-gray-600'}`}
                             >
                                 {currentProgram?.title}
                             </button>
@@ -154,7 +154,7 @@ export const Programs = () => {
                             <ChevronRight size={14} className="text-gray-300 flex-shrink-0" />
                             <button 
                                 onClick={() => setPath([path[0], path[1]])} 
-                                className={`text-sm font-bold whitespace-nowrap ${path.length === 2 ? 'text-[#004D7A]' : 'text-gray-400 hover:text-gray-600'}`}
+                                className={`text-sm font-bold whitespace-nowrap ${path.length === 2 ? 'text-primary' : 'text-gray-400 hover:text-gray-600'}`}
                             >
                                 {currentLevel?.name}
                             </button>
@@ -163,7 +163,7 @@ export const Programs = () => {
                     {path.length > 2 && (
                         <>
                             <ChevronRight size={14} className="text-gray-300 flex-shrink-0" />
-                            <span className="text-sm font-bold text-[#004D7A] whitespace-nowrap">{currentGrade} Courses</span>
+                            <span className="text-sm font-bold text-primary whitespace-nowrap">{currentGrade} Courses</span>
                         </>
                     )}
                 </div>
@@ -171,7 +171,7 @@ export const Programs = () => {
                 {path.length === 3 && !isEnrolledInCurrentGrade && (
                     <button 
                         onClick={handleEnroll}
-                        className="flex items-center justify-center gap-2 px-6 py-2.5 bg-[#004D7A] text-white rounded-xl text-sm font-bold hover:bg-[#003A5C] transition-all shadow-md active:scale-95"
+                        className="flex items-center justify-center gap-2 px-6 py-2.5 bg-primary text-white rounded-xl text-sm font-bold hover:bg-primary-dark transition-all shadow-md active:scale-95"
                     >
                         Enroll in {currentGrade}
                     </button>
@@ -186,13 +186,13 @@ export const Programs = () => {
             {path.length === 0 && (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
                     {mainPrograms.map(program => (
-                        <div key={program.id} className="bg-white rounded-3xl md:rounded-[2.5rem] p-4 border border-gray-100 group hover:shadow-2xl transition-all duration-500 flex flex-col h-full">
+                        <div key={program.id} className="bg-white/40 backdrop-blur-md rounded-3xl md:rounded-[2.5rem] p-4 border border-primary/10 group hover:shadow-2xl transition-all duration-500 flex flex-col h-full">
                             <div className="h-40 md:h-48 rounded-2xl md:rounded-[2rem] overflow-hidden mb-6 relative flex-shrink-0">
                                 <img src={program.img} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" alt={program.title} />
                                 <div className={`absolute inset-0 bg-gradient-to-br ${program.color} opacity-20`}></div>
                             </div>
                             <div className="px-2 flex-1 flex flex-col">
-                                <h3 className="text-lg md:text-xl font-bold text-gray-900 mb-3 group-hover:text-[#004D7A] transition-colors">{program.title}</h3>
+                                <h3 className="text-lg md:text-xl font-bold text-gray-900 mb-3 group-hover:text-primary transition-colors">{program.title}</h3>
                                 <p className="text-xs md:text-sm text-gray-500 mb-6">{program.desc}</p>
                                 <div className="flex items-center justify-between pt-6 border-t border-gray-50 mt-auto">
                                     <div className="flex flex-col">
@@ -201,7 +201,7 @@ export const Programs = () => {
                                     </div>
                                     <button 
                                         onClick={() => setPath([program.id])}
-                                        className="w-10 h-10 md:w-12 md:h-12 bg-[#F0F4F8] rounded-xl md:rounded-2xl flex items-center justify-center text-[#004D7A] group-hover:bg-[#004D7A] group-hover:text-white transition-all duration-300 shadow-sm flex-shrink-0"
+                                        className="w-10 h-10 md:w-12 md:h-12 bg-gray-50 rounded-xl md:rounded-2xl flex items-center justify-center text-primary group-hover:bg-primary group-hover:text-white transition-all duration-300 shadow-sm flex-shrink-0"
                                     >
                                         <ChevronRight size={20} />
                                     </button>
@@ -218,7 +218,7 @@ export const Programs = () => {
                         <div 
                             key={lvl.id} 
                             onClick={() => setPath([...path, lvl.id])}
-                            className="bg-white rounded-2xl md:rounded-[2.5rem] border border-gray-100 hover:shadow-2xl transition-all duration-500 cursor-pointer group flex flex-col overflow-hidden"
+                            className="bg-white/40 backdrop-blur-md rounded-2xl md:rounded-[2.5rem] border border-primary/10 hover:shadow-2xl transition-all duration-500 cursor-pointer group flex flex-col overflow-hidden"
                         >
                             <div className="h-32 md:h-40 overflow-hidden relative flex-shrink-0">
                                 <img src={(lvl as any).img} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" alt={lvl.name} />
@@ -226,12 +226,12 @@ export const Programs = () => {
                             </div>
                             <div className="p-4 md:p-6">
                                 <div className="flex flex-col md:flex-row md:justify-between md:items-start mb-3 md:mb-4">
-                                    <div className="w-10 h-10 md:w-12 md:h-12 bg-gray-50 rounded-xl md:rounded-2xl flex items-center justify-center text-[#004D7A] group-hover:bg-[#004D7A] group-hover:text-white transition-all mb-2 md:mb-0">
+                                    <div className="w-10 h-10 md:w-12 md:h-12 bg-gray-50 rounded-xl md:rounded-2xl flex items-center justify-center text-primary group-hover:bg-primary group-hover:text-white transition-all mb-2 md:mb-0">
                                         <Book size={20} />
                                     </div>
                                     <span className="text-[9px] md:text-[10px] text-gray-400 font-bold uppercase tracking-widest">{lvl.span}</span>
                                 </div>
-                                <h3 className="text-base md:text-xl font-bold text-gray-900 group-hover:text-[#004D7A] truncate">{lvl.name}</h3>
+                                <h3 className="text-base md:text-xl font-bold text-gray-900 group-hover:text-primary truncate">{lvl.name}</h3>
                             </div>
                         </div>
                     ))}
@@ -249,8 +249,8 @@ export const Programs = () => {
                                 key={grade}
                                 onClick={() => setPath([...path, grade])}
                                 className={`
-                                    p-6 md:p-8 bg-white border rounded-2xl md:rounded-3xl text-center transition-all cursor-pointer group relative overflow-hidden
-                                    ${isEnrolled ? 'border-green-500 bg-green-50/10' : 'border-gray-100 hover:border-[#004D7A] hover:shadow-xl hover:translate-y-[-4px]'}
+                                    p-6 md:p-8 bg-white/40 backdrop-blur-md border rounded-2xl md:rounded-3xl text-center transition-all cursor-pointer group relative overflow-hidden
+                                    ${isEnrolled ? 'border-green-500 bg-green-50/10' : 'border-primary/5 hover:border-primary hover:shadow-xl hover:translate-y-[-4px]'}
                                 `}
                             >
                                 {isEnrolled && (
@@ -263,7 +263,7 @@ export const Programs = () => {
                                         <Shield size={18} />
                                     </div>
                                 )}
-                                <div className={`text-xl md:text-2xl font-black mb-2 transition-colors ${isEnrolled ? 'text-green-600' : 'text-gray-300 group-hover:text-[#004D7A]'}`}>{grade}</div>
+                                <div className={`text-xl md:text-2xl font-black mb-2 transition-colors ${isEnrolled ? 'text-green-600' : 'text-gray-300 group-hover:text-primary'}`}>{grade}</div>
                                 <div className="text-[9px] md:text-[10px] text-gray-400 font-bold uppercase">
                                     {isEnrolled ? 'Continue Learning' : isEnrolledElsewhere ? 'Enrollment Locked' : 'View Classes'}
                                 </div>
@@ -276,7 +276,7 @@ export const Programs = () => {
             {path.length === 3 && (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                     {mockCourses.map(course => (
-                        <div key={course.id} className="bg-white rounded-3xl p-4 border border-gray-100 hover:shadow-xl transition-all group overflow-hidden relative">
+                        <div key={course.id} className="bg-white/40 backdrop-blur-md rounded-3xl p-4 border border-primary/10 hover:shadow-xl transition-all group overflow-hidden relative">
                             {!isEnrolledInCurrentGrade && (
                                 <div className="absolute inset-0 bg-white/60 backdrop-blur-[2px] z-10 flex flex-col items-center justify-center p-6 text-center">
                                     <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center text-gray-400 mb-3">
@@ -306,19 +306,26 @@ export const Programs = () => {
 };
 
 export const Messages = () => {
+    const navigate = useNavigate();
     const [selectedChat, setSelectedChat] = React.useState<number>(0);
     const [isListView, setIsListView] = React.useState(true);
     const [messageText, setMessageText] = React.useState('');
     const [isGroupTab, setIsGroupTab] = React.useState(false);
 
+    // Load profile to get current enrolled grade
+    const [profile] = React.useState(() => {
+        const saved = localStorage.getItem('soma_profile');
+        return saved ? JSON.parse(saved) : { grade: '' };
+    });
+
     const [contacts, setContacts] = React.useState([
-        { id: 0, name: 'Robin smith', msg: 'Done', time: '1d', avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&q=80&w=100', isGroup: false },
-        { id: 1, name: 'Arun Kumar', msg: 'Nope', time: '1d', avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&q=80&w=100', isGroup: false },
-        { id: 2, name: 'Amit kumar', msg: 'Happy Birthday', time: '1d', avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=crop&q=80&w=100', isGroup: false },
-        { id: 3, name: 'Abishek kumar', msg: 'When is exam?', time: '1d', avatar: 'https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?auto=format&fit=crop&q=80&w=100', isGroup: false },
-        { id: 4, name: 'Bivesh kumar', msg: 'Hello', time: '2d', avatar: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&q=80&w=100', isGroup: false },
-        { id: 5, name: 'Clara john', msg: 'Chemistry test', time: '2d', avatar: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?auto=format&fit=crop&q=80&w=100', isGroup: false },
-        { id: 6, name: 'Deepthi manohar', msg: 'I have completed', time: '2d', avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&q=80&w=100', isGroup: false },
+        { id: 0, name: 'Robin smith', msg: 'Done', time: '1d', avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&q=80&w=100', isGroup: false, grade: 'S2' },
+        { id: 1, name: 'Arun Kumar', msg: 'Nope', time: '1d', avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&q=80&w=100', isGroup: false, grade: 'S2' },
+        { id: 2, name: 'Amit kumar', msg: 'Happy Birthday', time: '1d', avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=crop&q=80&w=100', isGroup: false, grade: 'S1' },
+        { id: 3, name: 'Abishek kumar', msg: 'When is exam?', time: '1d', avatar: 'https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?auto=format&fit=crop&q=80&w=100', isGroup: false, grade: 'S2' },
+        { id: 4, name: 'Bivesh kumar', msg: 'Hello', time: '2d', avatar: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&q=80&w=100', isGroup: false, grade: 'P5' },
+        { id: 5, name: 'Clara john', msg: 'Chemistry test', time: '2d', avatar: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?auto=format&fit=crop&q=80&w=100', isGroup: false, grade: 'S2' },
+        { id: 6, name: 'Deepthi manohar', msg: 'I have completed', time: '2d', avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&q=80&w=100', isGroup: false, grade: 'S3' },
     ]);
 
     const [chatMessages, setChatMessages] = React.useState<Record<number, any[]>>({
@@ -367,7 +374,8 @@ export const Messages = () => {
             msg: 'Group created',
             time: 'Just now',
             avatar: 'https://images.unsplash.com/photo-1522202176988-66273c2fd55f?auto=format&fit=crop&q=80&w=100',
-            isGroup: true
+            isGroup: true,
+            grade: profile.grade
         };
 
         setContacts([newGroup, ...contacts]);
@@ -375,162 +383,207 @@ export const Messages = () => {
         setIsGroupTab(true);
     };
 
-    const filteredContacts = contacts.filter(c => isGroupTab ? c.isGroup : !c.isGroup);
-    const activeContact = contacts.find(c => c.id === selectedChat) || contacts[0];
+    const studentEnrolledGrade = profile.grade;
+    
+    // Filter contacts based on: 
+    // 1. Tab (Chat vs Groups)
+    // 2. Grade (Must match student's grade)
+    const filteredContacts = contacts.filter(c => {
+        const tabMatch = isGroupTab ? c.isGroup : !c.isGroup;
+        const gradeMatch = c.grade === studentEnrolledGrade;
+        return tabMatch && gradeMatch;
+    });
+
+    const activeContact = contacts.find(c => c.id === selectedChat) || filteredContacts[0];
     const currentMessages = chatMessages[selectedChat] || [];
+    const isEnrolled = !!studentEnrolledGrade;
 
     return (
         <Layout title="Messages">
             <div className="flex gap-6 h-[calc(100vh-16rem)] relative overflow-hidden">
-                {/* Left Panel: Contacts */}
-                <div className={`
-                    w-full md:w-80 bg-white rounded-3xl border border-gray-100 flex flex-col overflow-hidden shadow-sm transition-all duration-300
-                    ${!isListView && 'hidden md:flex'}
-                `}>
-                    <div className="p-4 border-b border-gray-50 flex gap-2">
-                        <div className="relative flex-1">
-                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
-                            <input 
-                                placeholder="Search" 
-                                className="w-full pl-10 pr-4 py-2 bg-gray-50 border-none rounded-xl text-sm outline-none focus:ring-2 focus:ring-[#3B82F6]/20" 
-                            />
+                {!isEnrolled ? (
+                    <div className="w-full h-full bg-white/40 backdrop-blur-md rounded-3xl border border-primary/10 flex flex-col items-center justify-center p-8 text-center shadow-sm">
+                        <div className="w-20 h-20 bg-primary-surface rounded-full flex items-center justify-center text-primary mb-6 group-hover:scale-110 transition-transform">
+                            <MessageSquare size={40} />
                         </div>
+                        <h2 className="text-2xl font-bold text-gray-900 mb-2">Connect with Peers</h2>
+                        <p className="text-gray-500 max-w-sm mb-8">
+                            You need to enroll in a grade to start chatting with your classmates.
+                        </p>
                         <button 
-                            onClick={handleCreateGroup}
-                            className="p-2 bg-blue-50 text-blue-600 rounded-xl hover:bg-blue-100 transition-colors"
-                            title="Create Group"
+                            onClick={() => navigate('/programs')}
+                            className="px-8 py-3 bg-primary text-white rounded-2xl font-bold hover:bg-primary-dark transition-all shadow-lg active:scale-95"
                         >
-                            <Folder size={18} />
+                            Go to Programs
                         </button>
                     </div>
-                    <div className="flex border-b border-gray-50 text-xs font-bold text-gray-400">
-                        <button 
-                            onClick={() => setIsGroupTab(false)}
-                            className={`flex-1 py-3 transition-colors ${!isGroupTab ? 'text-[#111827] border-b-2 border-[#111827]' : 'hover:text-gray-600'}`}
-                        >
-                            Chat
-                        </button>
-                        <button 
-                            onClick={() => setIsGroupTab(true)}
-                            className={`flex-1 py-3 transition-colors ${isGroupTab ? 'text-[#111827] border-b-2 border-[#111827]' : 'hover:text-gray-600'}`}
-                        >
-                            Groups
-                        </button>
-                    </div>
-                    <div className="flex-1 overflow-y-auto custom-scrollbar text-left font-medium">
-                        {filteredContacts.map((contact) => (
-                            <div 
-                                key={contact.id} 
-                                onClick={() => handleSelectChat(contact.id)}
-                                className={`flex items-center gap-3 p-4 border-b border-gray-50 cursor-pointer transition-colors ${selectedChat === contact.id ? 'bg-blue-50/50' : 'hover:bg-gray-50'}`}
-                            >
-                                <img src={contact.avatar} className="w-10 h-10 rounded-full object-cover flex-shrink-0" alt={contact.name} />
-                                <div className="flex-1 min-w-0">
-                                    <h4 className="text-sm font-bold text-gray-900 truncate text-left">{contact.name}</h4>
-                                    <p className="text-xs text-gray-400 truncate text-left">{contact.msg}</p>
+                ) : (
+                    <>
+                        {/* Left Panel: Contacts */}
+                        <div className={`
+                            w-full md:w-80 bg-white/40 backdrop-blur-md rounded-3xl border border-primary/10 flex flex-col overflow-hidden shadow-sm transition-all duration-300
+                            ${!isListView && 'hidden md:flex'}
+                        `}>
+                            <div className="p-4 border-b border-gray-50 flex gap-2">
+                                <div className="relative flex-1">
+                                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
+                                    <input 
+                                        placeholder="Search" 
+                                        className="w-full pl-10 pr-4 py-2 bg-primary-surface/60 border-none rounded-xl text-sm outline-none focus:ring-2 focus:ring-primary/20" 
+                                    />
                                 </div>
-                                <span className="text-[10px] font-bold text-gray-400 whitespace-nowrap">{contact.time}</span>
+                                <button 
+                                    onClick={handleCreateGroup}
+                                    className="p-2 bg-blue-50 text-blue-600 rounded-xl hover:bg-blue-100 transition-colors"
+                                    title="Create Group"
+                                >
+                                    <Folder size={18} />
+                                </button>
                             </div>
-                        ))}
-                    </div>
-                </div>
-
-                {/* Right Panel: Chat Detail */}
-                <div className={`
-                    flex-1 bg-white rounded-3xl border border-gray-100 flex flex-col overflow-hidden shadow-sm transition-all duration-300
-                    ${isListView && 'hidden md:flex'}
-                `}>
-                    {/* Chat Header */}
-                    <div className="p-4 border-b border-gray-50 flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                            <button 
-                                onClick={() => setIsListView(true)}
-                                className="md:hidden p-2 text-gray-400 hover:text-gray-600 rounded-lg"
-                            >
-                                <ArrowLeft size={20} />
-                            </button>
-                            <div className="relative flex-shrink-0">
-                                <img src={activeContact.avatar} className="w-8 h-8 md:w-10 md:h-10 rounded-full object-cover" alt="avatar" />
-                                <div className="absolute bottom-0 right-0 w-2 h-2 md:w-2.5 md:h-2.5 bg-green-500 border-2 border-white rounded-full"></div>
+                            <div className="flex border-b border-gray-50 text-xs font-bold text-gray-400">
+                                <button 
+                                    onClick={() => setIsGroupTab(false)}
+                                    className={`flex-1 py-3 transition-colors ${!isGroupTab ? 'text-primary border-b-2 border-primary' : 'hover:text-gray-600'}`}
+                                >
+                                    Chat
+                                </button>
+                                <button 
+                                    onClick={() => setIsGroupTab(true)}
+                                    className={`flex-1 py-3 transition-colors ${isGroupTab ? 'text-[#111827] border-b-2 border-[#111827]' : 'hover:text-gray-600'}`}
+                                >
+                                    Groups
+                                </button>
                             </div>
-                            <div className="text-left">
-                                <h3 className="text-xs md:text-sm font-bold text-gray-900 leading-none mb-1">{activeContact.name}</h3>
-                                <p className="text-[9px] md:text-[11px] text-gray-400">Online . Last seen 3.00 pm</p>
-                            </div>
-                        </div>
-                        <button className="p-2 text-gray-400 hover:text-gray-600">
-                            <MoreHorizontal size={20} />
-                        </button>
-                    </div>
-
-                    {/* Chat Area */}
-                    <div className="flex-1 p-4 md:p-6 overflow-y-auto space-y-6 bg-gray-50/30 custom-scrollbar">
-                        {currentMessages.length === 0 && (
-                            <div className="flex flex-col items-center justify-center h-full text-gray-400 gap-2">
-                                <MessageSquare size={48} className="opacity-20" />
-                                <p className="text-sm font-medium">No messages yet. Say hello!</p>
-                            </div>
-                        )}
-                        {currentMessages.map(msg => (
-                            <div key={msg.id} className={`flex items-start gap-3 ${msg.sender === 'me' ? 'justify-end' : ''}`}>
-                                {msg.sender === 'them' && <img src={activeContact.avatar} className="w-7 h-7 md:w-8 md:h-8 rounded-full border border-gray-100 flex-shrink-0" />}
-                                <div className={`
-                                    p-2.5 md:p-3 rounded-2xl text-xs md:text-sm max-w-[70%] sm:max-w-md shadow-sm text-left font-medium
-                                    ${msg.sender === 'me' 
-                                        ? 'bg-[#2D2DAA] text-white rounded-tr-none shadow-md' 
-                                        : 'bg-gray-200 text-gray-800 rounded-tl-none'}
-                                `}>
-                                    {msg.text}
-                                </div>
-                                {msg.sender === 'me' && (
-                                    <div className="w-7 h-7 md:w-8 md:h-8 rounded-full bg-blue-100 flex items-center justify-center text-[10px] font-bold text-blue-600 border border-white flex-shrink-0">
-                                        ME
+                            <div className="flex-1 overflow-y-auto custom-scrollbar text-left font-medium">
+                                {filteredContacts.length === 0 ? (
+                                    <div className="p-8 text-center text-gray-400">
+                                        <p className="text-xs">No peers found in {studentEnrolledGrade} yet.</p>
                                     </div>
+                                ) : (
+                                    filteredContacts.map((contact) => (
+                                        <div 
+                                            key={contact.id} 
+                                            onClick={() => handleSelectChat(contact.id)}
+                                            className={`flex items-center gap-3 p-4 border-b border-gray-50 cursor-pointer transition-colors ${selectedChat === contact.id ? 'bg-blue-50/50' : 'hover:bg-gray-50'}`}
+                                        >
+                                            <img src={contact.avatar} className="w-10 h-10 rounded-full object-cover flex-shrink-0" alt={contact.name} />
+                                            <div className="flex-1 min-w-0">
+                                                <h4 className="text-sm font-bold text-gray-900 truncate text-left">{contact.name}</h4>
+                                                <p className="text-xs text-gray-400 truncate text-left">{contact.msg}</p>
+                                            </div>
+                                            <span className="text-[10px] font-bold text-gray-400 whitespace-nowrap">{contact.time}</span>
+                                        </div>
+                                    ))
                                 )}
                             </div>
-                        ))}
-                    </div>
-
-                    {/* Chat Input */}
-                    <div className="p-3 md:p-4 border-t border-gray-50 flex items-center gap-2 md:gap-4">
-                        <button className="p-2 text-gray-400 hover:text-gray-600 bg-gray-100 rounded-lg md:rounded-xl flex-shrink-0">
-                            <Paperclip size={18} className="md:w-5 md:h-5 rotate-45" />
-                        </button>
-                        <div className="flex-1 relative">
-                            <input 
-                                value={messageText}
-                                onChange={(e) => setMessageText(e.target.value)}
-                                onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()}
-                                placeholder="Type a message..." 
-                                className="w-full px-3 md:px-4 py-2 md:py-3 bg-white border border-gray-100 rounded-xl md:rounded-2xl text-xs md:text-sm outline-none focus:border-blue-400 transition-all font-medium pr-10 md:pr-12" 
-                            />
-                            <button 
-                                onClick={handleSendMessage}
-                                className="absolute right-1.5 md:right-2 top-1/2 -translate-y-1/2 p-1.5 md:p-2 bg-blue-500 text-white rounded-lg md:rounded-xl hover:bg-blue-600 transition-colors shadow-sm flex-shrink-0"
-                            >
-                                <Send size={16} className="md:w-[18px] md:h-[18px]" />
-                            </button>
                         </div>
-                    </div>
-                </div>
+
+                        {/* Right Panel: Chat Detail */}
+                        <div className={`
+                            flex-1 bg-white/40 backdrop-blur-md rounded-3xl border border-primary/10 flex flex-col overflow-hidden shadow-sm transition-all duration-300
+                            ${isListView && 'hidden md:flex'}
+                        `}>
+                            {activeContact ? (
+                                <>
+                                    {/* Chat Header */}
+                                    <div className="p-4 border-b border-gray-50 flex items-center justify-between">
+                                        <div className="flex items-center gap-3">
+                                            <button 
+                                                onClick={() => setIsListView(true)}
+                                                className="md:hidden p-2 text-gray-400 hover:text-gray-600 rounded-lg"
+                                            >
+                                                <ArrowLeft size={20} />
+                                            </button>
+                                            <div className="relative flex-shrink-0">
+                                                <img src={activeContact.avatar} className="w-8 h-8 md:w-10 md:h-10 rounded-full object-cover" alt="avatar" />
+                                                <div className="absolute bottom-0 right-0 w-2 h-2 md:w-2.5 md:h-2.5 bg-green-500 border-2 border-white rounded-full"></div>
+                                            </div>
+                                            <div className="text-left">
+                                                <h3 className="text-xs md:text-sm font-bold text-gray-900 leading-none mb-1">{activeContact.name}</h3>
+                                                <p className="text-[9px] md:text-[11px] text-gray-400">Online . Last seen 3.00 pm</p>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* Chat Area */}
+                                    <div className="flex-1 p-4 md:p-6 overflow-y-auto space-y-6 bg-gray-50/30 custom-scrollbar">
+                                        {currentMessages.length === 0 && (
+                                            <div className="flex flex-col items-center justify-center h-full text-gray-400 gap-2">
+                                                <MessageSquare size={48} className="opacity-20" />
+                                                <p className="text-sm font-medium">No messages yet. Say hello!</p>
+                                            </div>
+                                        )}
+                                        {currentMessages.map(msg => (
+                                            <div key={msg.id} className={`flex items-start gap-3 ${msg.sender === 'me' ? 'justify-end' : ''}`}>
+                                                {msg.sender === 'them' && <img src={activeContact.avatar} className="w-7 h-7 md:w-8 md:h-8 rounded-full border border-gray-100 flex-shrink-0" alt="avatar" />}
+                                                <div className={`
+                                                    p-2.5 md:p-3 rounded-2xl text-xs md:text-sm max-w-[70%] sm:max-w-md shadow-sm text-left font-medium
+                                                    ${msg.sender === 'me' 
+                                                        ? 'bg-primary text-white rounded-tr-none shadow-md' 
+                                                        : 'bg-gray-200 text-gray-800 rounded-tl-none'}
+                                                `}>
+                                                    {msg.text}
+                                                </div>
+                                                {msg.sender === 'me' && (
+                                                    <div className="w-7 h-7 md:w-8 md:h-8 rounded-full bg-blue-100 flex items-center justify-center text-[10px] font-bold text-blue-600 border border-white flex-shrink-0">
+                                                        ME
+                                                    </div>
+                                                )}
+                                            </div>
+                                        ))}
+                                    </div>
+
+                                    {/* Chat Input */}
+                                    <div className="p-3 md:p-4 border-t border-gray-50 flex items-center gap-2 md:gap-4">
+                                        <button className="p-2 text-gray-400 hover:text-gray-600 bg-gray-100 rounded-lg md:rounded-xl flex-shrink-0">
+                                            <Paperclip size={18} className="md:w-5 md:h-5 rotate-45" />
+                                        </button>
+                                        <div className="flex-1 relative">
+                                            <input 
+                                                value={messageText}
+                                                onChange={(e) => setMessageText(e.target.value)}
+                                                onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()}
+                                                placeholder="Type a message..." 
+                                                className="w-full px-3 md:px-4 py-2 md:py-3 bg-primary-surface/40 border border-primary/5 rounded-xl md:rounded-2xl text-xs md:text-sm outline-none focus:border-primary transition-all font-medium pr-10 md:pr-12" 
+                                            />
+                                            <button 
+                                                onClick={handleSendMessage}
+                                                className="absolute right-1.5 md:right-2 top-1/2 -translate-y-1/2 p-1.5 md:p-2 bg-primary text-white rounded-lg md:rounded-xl hover:bg-primary-dark transition-colors shadow-sm flex-shrink-0"
+                                            >
+                                                <Send size={16} className="md:w-[18px] md:h-[18px]" />
+                                            </button>
+                                        </div>
+                                    </div>
+                                </>
+                            ) : (
+                                <div className="flex-1 flex flex-col items-center justify-center text-gray-400 gap-2">
+                                    <MessageSquare size={48} className="opacity-20" />
+                                    <p className="text-sm font-medium">Select a peer to start chatting</p>
+                                </div>
+                            )}
+                        </div>
+                    </>
+                )}
             </div>
         </Layout>
     );
 };
 
 export const Settings = () => {
-    const { updateUser, deleteAccount } = useAuth();
+    const { user, updateUser, deleteAccount } = useAuth();
     const navigate = useNavigate();
     const [activeSection, setActiveSection] = React.useState<'main' | 'personal' | 'security' | 'notifications'>('main');
     
     // User profile state
     const [profile, setProfile] = React.useState(() => {
         const saved = localStorage.getItem('soma_profile');
-        return saved ? JSON.parse(saved) : {
-            name: 'Swetha shankaresh',
-            email: 'swetha@somabox.com',
-            phone: '+250 788 000 000',
-            avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&q=80&w=200'
+        if (saved) return JSON.parse(saved);
+        return {
+            name: user?.email.split('@')[0] || 'User',
+            email: user?.email || '',
+            phone: '',
+            avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=crop&q=80&w=200',
+            grade: 'S2'
         };
     });
 
@@ -556,13 +609,18 @@ export const Settings = () => {
         e.preventDefault();
         const formData = new FormData(e.target as HTMLFormElement);
         const newEmail = formData.get('email') as string;
-        setProfile({
+        const newProfile = {
             ...profile,
             name: formData.get('name') as string,
             email: newEmail,
             phone: formData.get('phone') as string,
             grade: formData.get('grade') as string,
-        });
+            avatar: formData.get('avatar') as string,
+        };
+        setProfile(newProfile);
+        localStorage.setItem('soma_profile', JSON.stringify(newProfile));
+        // Broadcast change for other components
+        window.dispatchEvent(new Event('storage'));
         updateUser(newEmail);
         setActiveSection('main');
     };
@@ -586,7 +644,7 @@ export const Settings = () => {
         return (
             <Layout title="Personal Information">
                 <div className="max-w-xl">
-                    <button onClick={() => setActiveSection('main')} className="flex items-center gap-2 text-gray-400 hover:text-[#004D7A] mb-8 font-bold transition-colors">
+                    <button onClick={() => setActiveSection('main')} className="flex items-center gap-2 text-gray-400 hover:text-primary mb-8 font-bold transition-colors">
                         <ArrowLeft size={16} /> Back to Settings
                     </button>
                     <form onSubmit={handleProfileSubmit} className="space-y-6">
@@ -595,42 +653,54 @@ export const Settings = () => {
                             <input 
                                 name="name"
                                 defaultValue={profile.name}
-                                className="w-full px-4 py-3 bg-gray-50 border border-gray-100 rounded-2xl outline-none focus:border-[#3B82F6] transition-all font-medium"
+                                className="w-full px-4 py-3 bg-gray-50 border border-gray-100 rounded-2xl outline-none focus:border-primary transition-all font-medium"
                                 required 
                             />
                         </div>
-                        <div className="space-y-4 md:space-y-0 md:flex md:gap-4">
+                        <div className={`space-y-4 md:space-y-0 md:flex md:gap-4 ${user?.role !== 'Student' ? 'block' : ''}`}>
                             <div className="flex-1 space-y-2">
                                 <label className="text-sm font-bold text-gray-700 block">Email Address</label>
                                 <input 
                                     name="email"
                                     type="email"
                                     defaultValue={profile.email}
-                                    className="w-full px-4 py-3 bg-gray-50 border border-gray-100 rounded-2xl outline-none focus:border-[#3B82F6] transition-all font-medium"
+                                    className="w-full px-4 py-3 bg-gray-50 border border-gray-100 rounded-2xl outline-none focus:border-primary transition-all font-medium"
                                     required 
                                 />
                             </div>
-                            <div className="w-full md:w-32 space-y-2">
-                                <label className="text-sm font-bold text-gray-700 block">Grade/Level</label>
-                                <select 
-                                    name="grade"
-                                    defaultValue={profile.grade || 'S2'}
-                                    className="w-full px-4 py-3 bg-gray-50 border border-gray-100 rounded-2xl outline-none focus:border-[#3B82F6] transition-all font-medium appearance-none"
-                                >
-                                    {grades.map(g => <option key={g} value={g}>{g}</option>)}
-                                </select>
-                            </div>
+                            {user?.role === 'Student' && (
+                                <div className="w-full md:w-32 space-y-2">
+                                    <label className="text-sm font-bold text-gray-700 block">Grade/Level</label>
+                                    <select 
+                                        name="grade"
+                                        defaultValue={profile.grade || 'S2'}
+                                        className="w-full px-4 py-3 bg-gray-50 border border-gray-100 rounded-2xl outline-none focus:border-[#3B82F6] transition-all font-medium appearance-none"
+                                    >
+                                        {grades.map(g => <option key={g} value={g}>{g}</option>)}
+                                    </select>
+                                </div>
+                            )}
                         </div>
                         <div className="space-y-2">
                             <label className="text-sm font-bold text-gray-700 block">Phone Number</label>
                             <input 
                                 name="phone"
                                 defaultValue={profile.phone}
-                                className="w-full px-4 py-3 bg-gray-50 border border-gray-100 rounded-2xl outline-none focus:border-[#3B82F6] transition-all font-medium"
+                                className="w-full px-4 py-3 bg-gray-50 border border-gray-100 rounded-2xl outline-none focus:border-primary transition-all font-medium"
                                 required 
                             />
                         </div>
-                        <button type="submit" className="w-full py-4 bg-[#004D7A] text-white rounded-2xl font-bold hover:bg-[#003A5C] transition-all shadow-lg active:scale-95">
+                        <div className="space-y-2">
+                            <label className="text-sm font-bold text-gray-700 block">Avatar URL</label>
+                            <input 
+                                name="avatar"
+                                defaultValue={profile.avatar}
+                                className="w-full px-4 py-3 bg-gray-50 border border-gray-100 rounded-2xl outline-none focus:border-primary transition-all font-medium"
+                                placeholder="Paste image URL here"
+                                required 
+                            />
+                        </div>
+                        <button type="submit" className="w-full py-4 bg-primary text-white rounded-2xl font-bold hover:bg-primary-dark transition-all shadow-lg active:scale-95">
                             Save Changes
                         </button>
                     </form>
@@ -643,7 +713,7 @@ export const Settings = () => {
         return (
             <Layout title="Security">
                 <div className="max-w-xl">
-                    <button onClick={() => setActiveSection('main')} className="flex items-center gap-2 text-gray-400 hover:text-[#004D7A] mb-8 font-bold transition-colors">
+                    <button onClick={() => setActiveSection('main')} className="flex items-center gap-2 text-gray-400 hover:text-primary mb-8 font-bold transition-colors">
                         <ArrowLeft size={16} /> Back to Settings
                     </button>
                     <form onSubmit={handlePasswordSubmit} className="space-y-6">
@@ -651,7 +721,7 @@ export const Settings = () => {
                             <label className="text-sm font-bold text-gray-700 block">Current Password</label>
                             <input 
                                 type="password"
-                                className="w-full px-4 py-3 bg-gray-50 border border-gray-100 rounded-2xl outline-none focus:border-[#3B82F6] transition-all font-medium"
+                                className="w-full px-4 py-3 bg-gray-50 border border-gray-100 rounded-2xl outline-none focus:border-primary transition-all font-medium"
                                 required 
                             />
                         </div>
@@ -659,7 +729,7 @@ export const Settings = () => {
                             <label className="text-sm font-bold text-gray-700 block">New Password</label>
                             <input 
                                 type="password"
-                                className="w-full px-4 py-3 bg-gray-50 border border-gray-100 rounded-2xl outline-none focus:border-[#3B82F6] transition-all font-medium"
+                                className="w-full px-4 py-3 bg-gray-50 border border-gray-100 rounded-2xl outline-none focus:border-primary transition-all font-medium"
                                 required 
                             />
                         </div>
@@ -671,7 +741,7 @@ export const Settings = () => {
                                 required 
                             />
                         </div>
-                        <button type="submit" className="w-full py-4 bg-[#004D7A] text-white rounded-2xl font-bold hover:bg-[#003A5C] transition-all shadow-lg active:scale-95">
+                        <button type="submit" className="w-full py-4 bg-primary text-white rounded-2xl font-bold hover:bg-primary-dark transition-all shadow-lg active:scale-95">
                             Update Password
                         </button>
                     </form>
@@ -688,7 +758,7 @@ export const Settings = () => {
         return (
             <Layout title="Notifications">
                 <div className="max-w-xl">
-                    <button onClick={() => setActiveSection('main')} className="flex items-center gap-2 text-gray-400 hover:text-[#004D7A] mb-8 font-bold transition-colors">
+                    <button onClick={() => setActiveSection('main')} className="flex items-center gap-2 text-gray-400 hover:text-primary mb-8 font-bold transition-colors">
                         <ArrowLeft size={16} /> Back to Settings
                     </button>
                     <div className="space-y-4">
@@ -697,7 +767,7 @@ export const Settings = () => {
                             { id: 'pushNotifications', title: 'Push Notifications', desc: 'Real-time alerts on your device' },
                             { id: 'weeklyReports', title: 'Weekly Reports', desc: 'A summary of your weekly progress' },
                         ].map((item) => (
-                            <div key={item.id} className="flex items-center justify-between p-6 bg-gray-50 rounded-3xl group">
+                            <div key={item.id} className="flex items-center justify-between p-6 bg-primary-surface/60 border border-primary/5 rounded-3xl group">
                                 <div className="text-left">
                                     <div className="font-bold text-gray-900">{item.title}</div>
                                     <div className="text-xs text-gray-400">{item.desc}</div>
@@ -722,7 +792,7 @@ export const Settings = () => {
                 <div className="flex flex-col md:flex-row items-center gap-6 mb-8 md:mb-10 pb-8 md:pb-10 border-b border-gray-100 text-center md:text-left">
                     <div className="relative">
                         <img className="w-20 h-20 md:w-24 md:h-24 rounded-2xl md:rounded-3xl object-cover" src={profile.avatar} alt="Profile" />
-                        <button className="absolute -bottom-2 -right-2 p-1.5 md:p-2 bg-white rounded-lg md:rounded-xl shadow-lg border border-gray-100 text-[#004D7A]">
+                        <button className="absolute -bottom-2 -right-2 p-1.5 md:p-2 bg-white rounded-lg md:rounded-xl shadow-lg border border-gray-100 text-primary">
                             <User size={14} className="md:w-4 md:h-4" />
                         </button>
                     </div>
@@ -741,10 +811,10 @@ export const Settings = () => {
                         <div 
                             key={item.id} 
                             onClick={() => setActiveSection(item.id as any)}
-                            className="flex items-center justify-between p-4 md:p-6 bg-gray-50 rounded-2xl md:rounded-3xl cursor-pointer hover:bg-white hover:shadow-sm border border-transparent hover:border-gray-100 transition-all group"
+                            className="flex items-center justify-between p-4 md:p-6 bg-primary-surface/60 rounded-2xl md:rounded-3xl cursor-pointer hover:bg-white hover:shadow-sm border border-transparent hover:border-primary/5 transition-all group"
                         >
                             <div className="flex items-center gap-3 md:gap-4">
-                                <div className="p-2.5 md:p-3 bg-white rounded-xl md:rounded-2xl text-gray-400 group-hover:text-[#004D7A] transition-colors shadow-sm">
+                                <div className="p-2.5 md:p-3 bg-white rounded-xl md:rounded-2xl text-gray-400 group-hover:text-primary transition-colors shadow-sm">
                                     <item.icon size={20} className="md:w-[22px] md:h-[22px]" />
                                 </div>
                                 <div className="text-left">

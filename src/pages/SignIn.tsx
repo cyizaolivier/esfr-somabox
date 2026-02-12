@@ -6,8 +6,8 @@ import { Eye, EyeOff, User, Shield, Briefcase } from 'lucide-react'
 export default function SignIn() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
-  const [role, setRole] = useState<UserRole>('Student')
   const [showPassword, setShowPassword] = useState(false)
+  const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const auth = useAuth()
   const nav = useNavigate()
@@ -15,11 +15,14 @@ export default function SignIn() {
   const submit = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
+    setError(null)
     try {
-      await auth.signIn(email, password, role)
-      if (role === 'Admin') nav('/admin/dashboard')
-      else if (role === 'Facilitator') nav('/facilitator/dashboard')
+      const userRole = await auth.signIn(email, password)
+      if (userRole === 'Admin') nav('/admin/dashboard')
+      else if (userRole === 'Facilitator') nav('/facilitator/dashboard')
       else nav('/dashboard')
+    } catch (err: any) {
+      setError(err.message || 'Login failed')
     } finally {
       setLoading(false)
     }
@@ -34,11 +37,11 @@ export default function SignIn() {
   return (
     <div className="min-h-screen flex">
       {/* Left Column - Image & Branding */}
-      <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden bg-[#004D7A]">
+      <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden bg-primary">
         <img 
           src="https://images.unsplash.com/photo-1522202176988-66273c2fd55f?auto=format&fit=crop&q=80&w=1000" 
           alt="Students studying"
-          className="absolute inset-0 w-full h-full object-cover opacity-60 mix-blend-overlay"
+          className="absolute inset-0 w-full h-full object-cover opacity-100 mix-blend-overlay"
         />
         <div className="relative z-10 p-16 flex flex-col justify-between h-full text-white">
           <div className="flex items-center gap-3 mb-24">
@@ -58,7 +61,7 @@ export default function SignIn() {
 
           <div className="max-w-md">
             <h1 className="text-5xl font-bold leading-tight mb-6">
-              Bridging the gap in <span className="text-[#F4A261]">global education</span>
+              Bridging the gap in <span className="text-primary-light">global education</span>
             </h1>
             <p className="text-lg opacity-80 mb-12">
               Access quality education anytime, anywhere. Join thousands of students transforming their future through technology.
@@ -83,7 +86,7 @@ export default function SignIn() {
       </div>
 
       {/* Right Column - Form */}
-      <div className="w-full lg:w-1/2 flex items-center justify-center p-8 bg-white overflow-y-auto">
+      <div className="w-full lg:w-1/2 flex items-center justify-center p-8 bg-primary-surface overflow-y-auto">
         <div className="max-w-md w-full py-12">
           <div className="mb-10 text-center lg:text-left">
             <h2 className="text-4xl font-bold text-gray-900 mb-2">Sign In</h2>
@@ -91,28 +94,17 @@ export default function SignIn() {
           </div>
 
           <form onSubmit={submit} className="space-y-6">
-            <div className="grid grid-cols-3 gap-3 mb-8">
-              {roleOptions.map((opt) => (
-                <button
-                  key={opt.id}
-                  type="button"
-                  onClick={() => setRole(opt.id)}
-                  className={`flex flex-col items-center gap-2 p-3 rounded-xl border-2 transition-all ${
-                    role === opt.id 
-                      ? 'border-[#004D7A] bg-[#004D7A]/5 text-[#004D7A]' 
-                      : 'border-gray-100 text-gray-400 hover:border-gray-200'
-                  }`}
-                >
-                  <opt.icon size={20} />
-                  <span className="text-xs font-bold">{opt.label}</span>
-                </button>
-              ))}
-            </div>
+            {error && (
+              <div className="bg-red-50 text-red-600 p-4 rounded-xl text-sm font-bold border border-red-100 flex items-center gap-2">
+                <span className="w-1.5 h-1.5 bg-red-600 rounded-full" />
+                {error}
+              </div>
+            )}
 
             <div>
               <label className="block text-sm font-semibold text-gray-700 mb-2">Email</label>
               <input
-                className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-[#004D7A]/20 transition-all font-medium"
+                className="w-full bg-white/60 border border-primary/10 rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-primary/20 transition-all font-medium"
                 placeholder="Enter your email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
@@ -124,7 +116,7 @@ export default function SignIn() {
               <label className="block text-sm font-semibold text-gray-700 mb-2">Password</label>
               <div className="relative">
                 <input
-                  className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-[#004D7A]/20 transition-all font-medium"
+                  className="w-full bg-white/60 border border-primary/10 rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-primary/20 transition-all font-medium"
                   placeholder="Enter your password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
@@ -143,23 +135,23 @@ export default function SignIn() {
 
             <div className="flex items-center justify-between text-sm">
               <label className="flex items-center gap-2 cursor-pointer">
-                <input type="checkbox" className="rounded text-[#004D7A] focus:ring-[#004D7A]" />
+                <input type="checkbox" className="rounded text-primary focus:ring-primary" />
                 <span className="text-gray-600 font-medium">Remember me</span>
               </label>
-              <a href="#" className="text-[#004D7A] font-semibold hover:underline">Forgot Password?</a>
+              <a href="#" className="text-primary font-semibold hover:underline">Forgot Password?</a>
             </div>
 
             <button
               type="submit"
-              className="w-full bg-[#004D7A] text-white py-3 rounded-xl font-bold hover:bg-[#003B5C] transition-all shadow-lg shadow-[#004D7A]/20 disabled:opacity-70"
+              className="w-full bg-primary text-white py-3 rounded-xl font-bold hover:bg-primary-dark transition-all shadow-lg shadow-primary/20 disabled:opacity-70"
               disabled={loading}
             >
-              {loading ? 'Signing in...' : `Sign In as ${role}`}
+              {loading ? 'Signing in...' : 'Sign In'}
             </button>
           </form>
 
           <p className="mt-8 text-center text-gray-600 font-medium">
-            Don't have an account? <Link className="text-[#004D7A] font-bold hover:underline" to="/signup">Sign up Here</Link>
+            Don't have an account? <Link className="text-primary font-bold hover:underline" to="/signup">Sign up Here</Link>
           </p>
         </div>
       </div>

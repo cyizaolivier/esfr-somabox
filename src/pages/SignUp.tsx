@@ -11,19 +11,23 @@ export default function SignUp() {
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
   const auth = useAuth()
   const nav = useNavigate()
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault()
+    setError(null)
     if (password !== confirmPassword) {
-      alert("Passwords do not match")
+      setError("Passwords do not match")
       return
     }
     setLoading(true)
     try {
       await auth.signUp(email, password)
       nav('/dashboard')
+    } catch (err: any) {
+      setError(err.message || 'Registration failed')
     } finally {
       setLoading(false)
     }
@@ -32,7 +36,7 @@ export default function SignUp() {
   return (
     <div className="min-h-screen flex">
       {/* Left Column - Image & Branding */}
-      <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden bg-[#004D7A]">
+      <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden bg-primary">
         <img 
           src="https://images.unsplash.com/photo-1523240795204-d076406ac051?auto=format&fit=crop&q=80&w=1000" 
           alt="Students learning"
@@ -57,7 +61,7 @@ export default function SignUp() {
 
           <div className="max-w-md">
             <h1 className="text-5xl font-bold leading-tight mb-6">
-              Bridging the gap in <span className="text-[#F4A261]">global education</span>
+              Bridging the gap in <span className="text-primary-light">global education</span>
             </h1>
             <p className="text-lg opacity-80 mb-12">
               Access quality education anytime, anywhere. Join thousands of students transforming their future through technology.
@@ -90,7 +94,7 @@ export default function SignUp() {
       </div>
 
       {/* Right Column - Form */}
-      <div className="w-full lg:w-1/2 flex items-center justify-center p-8 bg-white overflow-y-auto">
+      <div className="w-full lg:w-1/2 flex items-center justify-center p-8 bg-primary-surface overflow-y-auto">
         <div className="max-w-md w-full py-8">
           <div className="mb-8 text-center lg:text-left">
             <h2 className="text-4xl font-bold text-gray-900 mb-2">Sign Up</h2>
@@ -98,10 +102,16 @@ export default function SignUp() {
           </div>
 
           <form onSubmit={submit} className="space-y-5">
+            {error && (
+              <div className="bg-red-50 text-red-600 p-4 rounded-xl text-sm font-bold border border-red-100 flex items-center gap-2">
+                <span className="w-1.5 h-1.5 bg-red-600 rounded-full" />
+                {error}
+              </div>
+            )}
             <div>
               <label className="block text-sm font-semibold text-gray-700 mb-2">Fullname</label>
               <input
-                className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-[#004D7A]/20 transition-all"
+                className="w-full bg-white/60 border border-primary/10 rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-primary/20 transition-all"
                 placeholder="Input your fullname"
                 value={fullname}
                 onChange={(e) => setFullname(e.target.value)}
@@ -112,7 +122,7 @@ export default function SignUp() {
             <div>
               <label className="block text-sm font-semibold text-gray-700 mb-2">Email</label>
               <input
-                className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-[#004D7A]/20 transition-all"
+                className="w-full bg-white/60 border border-primary/10 rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-primary/20 transition-all"
                 placeholder="Enter your email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
@@ -124,7 +134,7 @@ export default function SignUp() {
               <label className="block text-sm font-semibold text-gray-700 mb-2">Password</label>
               <div className="relative">
                 <input
-                  className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-[#004D7A]/20 transition-all"
+                  className="w-full bg-white/60 border border-primary/10 rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-primary/20 transition-all"
                   placeholder="Enter your password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
@@ -144,7 +154,7 @@ export default function SignUp() {
               <label className="block text-sm font-semibold text-gray-700 mb-2">Confirm-Password</label>
               <div className="relative">
                 <input
-                  className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-[#004D7A]/20 transition-all"
+                  className="w-full bg-white/60 border border-primary/10 rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-primary/20 transition-all"
                   placeholder="Enter your confirm password"
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
@@ -163,7 +173,7 @@ export default function SignUp() {
 
             <button
               type="submit"
-              className="w-full bg-[#004D7A] text-white py-3 rounded-xl font-bold hover:bg-[#003B5C] transition-all shadow-lg shadow-[#004D7A]/20 disabled:opacity-70 mt-4"
+              className="w-full bg-primary text-white py-3 rounded-xl font-bold hover:bg-primary-dark transition-all shadow-lg shadow-primary/20 disabled:opacity-70 mt-4"
               disabled={loading}
             >
               {loading ? 'Creating account...' : 'Sign Up'}
@@ -171,7 +181,7 @@ export default function SignUp() {
           </form>
 
           <p className="mt-8 text-center text-gray-600">
-            Already have an account? <Link className="text-[#004D7A] font-bold hover:underline" to="/signin">Sign in Here</Link>
+            Already have an account? <Link className="text-primary font-bold hover:underline" to="/signin">Sign in Here</Link>
           </p>
         </div>
       </div>

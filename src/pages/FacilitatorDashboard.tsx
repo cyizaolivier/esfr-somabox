@@ -6,12 +6,23 @@ import { BookOpen, Users, Star, Clock, PlayCircle, Plus } from 'lucide-react'
 export const FacilitatorDashboard = () => {
   const location = useLocation()
   const isCoursesView = location.pathname === '/facilitator/courses'
+  const [view, setView] = React.useState<'stats' | 'studentList'>('stats')
+
+  const [studentCount, setStudentCount] = React.useState(0);
+
+  React.useEffect(() => {
+    const savedUsers = localStorage.getItem('soma_users');
+    if (savedUsers) {
+      const users = JSON.parse(savedUsers);
+      setStudentCount(users.filter((u: any) => u.role === 'Student').length);
+    }
+  }, []);
 
   const stats = [
-    { label: 'My Courses', value: '12', icon: BookOpen, color: 'bg-blue-50 text-blue-600' },
-    { label: 'Active Students', value: '840', icon: Users, color: 'bg-green-50 text-green-600' },
-    { label: 'Avg. Rating', value: '4.9', icon: Star, color: 'bg-yellow-50 text-yellow-600' },
-    { label: 'Hours Taught', value: '3,200', icon: Clock, color: 'bg-purple-50 text-purple-600' },
+    { label: 'My Courses', value: '0', icon: BookOpen, color: 'bg-blue-50 text-blue-600' },
+    { label: 'Active Students', value: studentCount.toLocaleString(), icon: Users, color: 'bg-green-50 text-green-600' },
+    { label: 'Avg. Rating', value: '0.0', icon: Star, color: 'bg-yellow-50 text-yellow-600' },
+    { label: 'Hours Taught', value: '0', icon: Clock, color: 'bg-purple-50 text-purple-600' },
   ]
 
   const myCourses = [
@@ -20,14 +31,66 @@ export const FacilitatorDashboard = () => {
     { id: 3, title: 'UI/UX Design Systems', students: '320', progress: 95, image: 'https://images.unsplash.com/photo-1541462608141-ad43bddee296?auto=format&fit=crop&q=80&w=400' },
   ]
 
+  const StudentList = () => {
+    const savedUsers = localStorage.getItem('soma_users');
+    const users = savedUsers ? JSON.parse(savedUsers) : [];
+    const students = users.filter((u: any) => u.role === 'Student');
+
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <h2 className="text-2xl font-bold text-gray-900">Enrolled Students ({students.length})</h2>
+          <button 
+            onClick={() => setView('stats')}
+            className="text-primary font-bold text-sm hover:underline"
+          >
+            Back to Overview
+          </button>
+        </div>
+        
+        <div className="bg-white/40 backdrop-blur-md border border-primary/10 rounded-[2rem] overflow-hidden">
+          <table className="w-full text-left border-collapse">
+            <thead>
+              <tr className="bg-primary/5">
+                <th className="px-6 py-4 text-xs font-bold text-primary uppercase tracking-wider">Email</th>
+                <th className="px-6 py-4 text-xs font-bold text-primary uppercase tracking-wider text-right">Status</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-primary/5">
+              {students.length > 0 ? students.map((u: any, i: number) => (
+                <tr key={i} className="hover:bg-primary/5 transition-colors">
+                  <td className="px-6 py-4 text-sm font-medium text-gray-900">{u.email}</td>
+                  <td className="px-6 py-4 text-right">
+                    <span className="w-2 h-2 rounded-full bg-green-500 inline-block mr-2" />
+                    <span className="text-[11px] font-bold text-gray-400 uppercase">Active</span>
+                  </td>
+                </tr>
+              )) : (
+                <tr>
+                  <td colSpan={2} className="px-6 py-20 text-center text-gray-400 font-bold italic">
+                    No students currently enrolled (0)
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <DashboardLayout title={isCoursesView ? "My Courses" : "Facilitator Dashboard"}>
       <div className="space-y-10">
-        {!isCoursesView && (
+        {!isCoursesView && view === 'stats' && (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
             {stats.map((stat, i) => (
-              <div key={i} className="p-6 bg-white border border-gray-100 rounded-[2rem] shadow-sm hover:shadow-md transition-all">
-                <div className={`w-12 h-12 ${stat.color} rounded-2xl flex items-center justify-center mb-4`}>
+              <div 
+                key={i} 
+                onClick={() => { if (stat.label === 'Active Students') setView('studentList'); }}
+                className={`p-6 bg-white/40 backdrop-blur-md border border-primary/10 rounded-[2rem] shadow-sm hover:shadow-md transition-all ${stat.label === 'Active Students' ? 'cursor-pointer group' : ''}`}
+              >
+                <div className={`w-12 h-12 ${stat.color} rounded-2xl flex items-center justify-center mb-4 ${stat.label === 'Active Students' ? 'group-hover:scale-110 transition-transform' : ''}`}>
                   <stat.icon size={24} />
                 </div>
                 <div className="text-sm font-bold text-gray-400">{stat.label}</div>
@@ -37,6 +100,8 @@ export const FacilitatorDashboard = () => {
           </div>
         )}
 
+        {!isCoursesView && view === 'studentList' && <StudentList />}
+
         {/* Courses Section */}
         <div className="space-y-6">
           <div className="flex items-center justify-between">
@@ -44,11 +109,11 @@ export const FacilitatorDashboard = () => {
               {isCoursesView ? "All Created Courses" : "Manage Recent Courses"}
             </h2>
             {isCoursesView ? (
-              <button className="flex items-center gap-2 px-6 py-2.5 bg-[#004D7A] text-white rounded-xl font-bold hover:bg-[#003A5C] transition-all">
+              <button className="flex items-center gap-2 px-6 py-2.5 bg-primary text-white rounded-xl font-bold hover:bg-primary-dark transition-all">
                 <Plus size={18} /> Create New Course
               </button>
             ) : (
-              <button className="text-[#004D7A] font-bold text-sm hover:underline">View all courses</button>
+              <button className="text-primary font-bold text-sm hover:underline">View all courses</button>
             )}
           </div>
           
@@ -58,21 +123,17 @@ export const FacilitatorDashboard = () => {
                 <div className="relative aspect-video rounded-[2rem] overflow-hidden mb-4 shadow-sm group-hover:shadow-xl transition-all duration-500">
                   <img src={course.image} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" alt={course.title} />
                   <div className="absolute inset-0 bg-black/20 group-hover:bg-black/40 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
-                    <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center text-[#004D7A] shadow-lg transform scale-50 group-hover:scale-100 transition-transform">
+                    <div className="w-12 h-12 bg-primary-surface rounded-full flex items-center justify-center text-primary shadow-lg transform scale-50 group-hover:scale-100 transition-transform">
                       <PlayCircle size={24} />
                     </div>
                   </div>
                 </div>
                 <div className="space-y-1">
-                  <div className="flex justify-between items-start">
-                    <h3 className="font-bold text-gray-900 group-hover:text-[#004D7A] transition-colors">{course.title}</h3>
-                    <span className="text-xs font-bold text-gray-400">{course.students} Students</span>
-                  </div>
                   <div className="flex items-center gap-3">
                     <div className="flex-1 h-1.5 bg-gray-100 rounded-full overflow-hidden">
-                      <div className="h-full bg-[#004D7A] rounded-full" style={{ width: `${course.progress}%` }}></div>
+                      <div className="h-full bg-primary rounded-full" style={{ width: `${course.progress}%` }}></div>
                     </div>
-                    <span className="text-[10px] font-extrabold text-[#004D7A]">{course.progress}% Content Ready</span>
+                    <span className="text-[10px] font-extrabold text-primary">{course.progress}% Content Ready</span>
                   </div>
                 </div>
               </div>
