@@ -116,6 +116,20 @@ export const Programs = () => {
         const newProfile = { ...profile, grade: currentGrade };
         setProfile(newProfile);
         localStorage.setItem('soma_profile', JSON.stringify(newProfile));
+        
+        // Initialize student progress with courses from this grade
+        const studentProgress = {
+            email: newProfile.name || 'student',
+            courses: mockCourses.map(course => ({
+                courseId: `${currentGrade}-${course.id}`,
+                courseName: course.name,
+                progress: 0,
+                status: 'pending' as const,
+                lastUpdated: new Date().toISOString()
+            }))
+        };
+        localStorage.setItem('soma_student_progress', JSON.stringify(studentProgress));
+        
         // Trigger storage event for Dashboard
         window.dispatchEvent(new Event('storage'));
         alert(`Successfully enrolled in ${currentGrade}!`);

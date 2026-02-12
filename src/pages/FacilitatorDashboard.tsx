@@ -1,22 +1,40 @@
-import React from 'react'
+import React, { useState, useEffect } from 'react'
 import { useLocation } from 'react-router-dom'
 import DashboardLayout from '../components/DashboardLayout'
-import { BookOpen, Users, Star, Clock, PlayCircle, Plus } from 'lucide-react'
+import { BookOpen, Users, Star, Clock, PlayCircle } from 'lucide-react'
+import { useAuth } from '../auth'
 
 export const FacilitatorDashboard = () => {
+  const { user } = useAuth()
   const location = useLocation()
   const isCoursesView = location.pathname === '/facilitator/courses'
-  const [view, setView] = React.useState<'stats' | 'studentList'>('stats')
+  const [view, setView] = useState<'stats' | 'studentList'>('stats')
+  const [studentCount, setStudentCount] = useState(0);
+  const [profile, setProfile] = useState(() => {
+    const saved = localStorage.getItem('soma_profile');
+    if (saved) return JSON.parse(saved);
+    return {
+      name: user?.email?.split('@')[0] || 'Facilitator',
+      avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=crop&q=80&w=150',
+    };
+  });
 
-  const [studentCount, setStudentCount] = React.useState(0);
-
-  React.useEffect(() => {
+  useEffect(() => {
+    // Load student count
     const savedUsers = localStorage.getItem('soma_users');
     if (savedUsers) {
       const users = JSON.parse(savedUsers);
       setStudentCount(users.filter((u: any) => u.role === 'Student').length);
     }
-  }, []);
+
+    // Listen for profile changes
+    const handleStorageChange = () => {
+      const saved = localStorage.getItem('soma_profile');
+      if (saved) setProfile(JSON.parse(saved));
+    };
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
+  }, [view]);
 
   const stats = [
     { label: 'My Courses', value: '0', icon: BookOpen, color: 'bg-blue-50 text-blue-600' },
@@ -108,11 +126,7 @@ export const FacilitatorDashboard = () => {
             <h2 className="text-2xl font-bold text-gray-900">
               {isCoursesView ? "All Created Courses" : "Manage Recent Courses"}
             </h2>
-            {isCoursesView ? (
-              <button className="flex items-center gap-2 px-6 py-2.5 bg-primary text-white rounded-xl font-bold hover:bg-primary-dark transition-all">
-                <Plus size={18} /> Create New Course
-              </button>
-            ) : (
+            {!isCoursesView && (
               <button className="text-primary font-bold text-sm hover:underline">View all courses</button>
             )}
           </div>
