@@ -9,6 +9,8 @@ type AuthContext = {
   signIn: (email: string, password: string, role: UserRole) => Promise<void>
   signUp: (email: string, password: string) => Promise<void>
   signOut: () => void
+  updateUser: (email: string) => void
+  deleteAccount: () => void
 }
 
 const AuthContext = createContext<AuthContext | undefined>(undefined)
@@ -37,10 +39,26 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const signOut = () => {
     setUser(null)
     localStorage.removeItem('soma_auth');
+    localStorage.removeItem('soma_profile');
+  }
+
+  const updateUser = (email: string) => {
+    if (user) {
+      const updatedUser = { ...user, email };
+      setUser(updatedUser);
+      localStorage.setItem('soma_auth', JSON.stringify(updatedUser));
+    }
+  }
+
+  const deleteAccount = () => {
+    setUser(null);
+    localStorage.removeItem('soma_auth');
+    localStorage.removeItem('soma_profile');
+    localStorage.removeItem('soma_notifications');
   }
 
   return (
-    <AuthContext.Provider value={{ user, signIn, signUp, signOut }}>
+    <AuthContext.Provider value={{ user, signIn, signUp, signOut, updateUser, deleteAccount }}>
       {children}
     </AuthContext.Provider>
   )

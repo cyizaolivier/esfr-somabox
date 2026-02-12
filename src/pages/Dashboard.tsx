@@ -1,11 +1,33 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../auth'
 import Sidebar from '../components/Sidebar'
 import { Bell, CheckSquare, MoreHorizontal, ClipboardList, Menu } from 'lucide-react'
 
 export default function Dashboard() {
   const { user } = useAuth()
+  const navigate = useNavigate()
   const [isSidebarOpen, setIsSidebarOpen] = useState(false)
+  
+  // Load profile from localStorage if it exists
+  const [profile, setProfile] = useState(() => {
+    const saved = localStorage.getItem('soma_profile');
+    return saved ? JSON.parse(saved) : {
+      name: 'Swetha shankaresh',
+      avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&q=80&w=150',
+      grade: 'S2'
+    };
+  });
+
+  useEffect(() => {
+    // Listen for storage changes to update profile in real-time if changed in settings
+    const handleStorageChange = () => {
+      const saved = localStorage.getItem('soma_profile');
+      if (saved) setProfile(JSON.parse(saved));
+    };
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
+  }, []);
 
   const chats = [
     { id: 1, name: "Emma Kent", msg: "Hey...!", time: "12:00 AM", online: true, avatar: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?auto=format&fit=crop&q=80&w=100" },
@@ -50,13 +72,14 @@ export default function Dashboard() {
 
             <div className="flex items-center gap-2 md:gap-3 pl-2 md:pl-6 border-l border-gray-200 lg:border-none">
               <img 
-                src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&q=80&w=150" 
+                src={profile.avatar} 
                 alt="Profile" 
-                className="w-8 h-8 md:w-12 md:h-12 rounded-full object-cover border-2 border-white shadow-sm"
+                className="w-8 h-8 md:w-12 md:h-12 rounded-full object-cover border-2 border-white shadow-sm cursor-pointer"
+                onClick={() => navigate('/settings')}
               />
               <div className="hidden sm:block text-left">
-                <div className="text-xs md:text-sm font-bold text-gray-900 leading-none mb-1">Swetha shankaresh</div>
-                <div className="text-[10px] md:text-xs text-gray-500 font-medium text-left">Student</div>
+                <div className="text-xs md:text-sm font-bold text-gray-900 leading-none mb-1">{profile.name}</div>
+                <div className="text-[10px] md:text-xs text-gray-500 font-medium text-left">{user?.role || 'Student'}</div>
               </div>
             </div>
           </div>
@@ -122,7 +145,18 @@ export default function Dashboard() {
             <div className="bg-white rounded-[1.5rem] md:rounded-[2.5rem] p-6 md:p-10 shadow-sm border border-white/60">
               <div className="flex items-center justify-between mb-6 md:mb-8">
                 <h2 className="text-xl md:text-2xl font-bold text-[#4B5563]">Courses</h2>
-                <button className="text-[#004D7A] text-xs font-bold hover:underline">View all</button>
+                <button 
+                  onClick={() => {
+                    const grade = profile.grade || 'S2';
+                    let initialPath = ['rwandan', 'secondary', grade];
+                    if (grade.startsWith('P')) initialPath = ['rwandan', 'primary', grade];
+                    if (grade.startsWith('Year')) initialPath = ['rwandan', 'university', grade];
+                    navigate('/programs', { state: { initialPath } });
+                  }}
+                  className="text-[#004D7A] text-xs font-bold hover:underline"
+                >
+                  View all
+                </button>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 md:gap-8">
                 {courses.map(course => (
@@ -148,11 +182,20 @@ export default function Dashboard() {
             <div className="bg-white rounded-[1.5rem] md:rounded-[2.5rem] p-6 md:p-8 shadow-sm border border-white/60">
               <div className="flex items-center justify-between mb-6">
                 <h2 className="text-lg md:text-xl font-bold text-gray-800">Chats</h2>
-                <button className="text-[#3B82F6] text-xs font-bold hover:underline">View all</button>
+                <button 
+                  onClick={() => navigate('/messages')}
+                  className="text-[#3B82F6] text-xs font-bold hover:underline"
+                >
+                  View all
+                </button>
               </div>
               <div className="space-y-4">
                 {chats.map(chat => (
-                  <div key={chat.id} className="flex items-center gap-3 group cursor-pointer">
+                  <div 
+                    key={chat.id} 
+                    onClick={() => navigate('/messages')}
+                    className="flex items-center gap-3 group cursor-pointer hover:bg-gray-50 p-2 rounded-xl transition-all"
+                  >
                     <div className="relative flex-shrink-0">
                       <img src={chat.avatar} className="w-8 h-8 md:w-10 md:h-10 rounded-full object-cover" alt={chat.name} />
                       {chat.online && (
