@@ -429,11 +429,7 @@ export const FacilitatorDashboard = () => {
             <h2 className="text-2xl font-bold text-gray-900">
               {isCoursesView ? "All Created Courses" : "Manage Recent Courses"}
             </h2>
-            {isCoursesView ? (
-              <button className="flex items-center gap-2 px-6 py-2.5 bg-primary text-white rounded-xl font-bold hover:bg-primary-dark transition-all">
-                <Plus size={18} /> Create New Course
-              </button>
-            ) : (
+            {!isCoursesView && (
               <button className="text-primary font-bold text-sm hover:underline">View all courses</button>
             )}
           </div>

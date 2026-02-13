@@ -2,12 +2,22 @@ import React, { useEffect, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import DashboardLayout from '../components/DashboardLayout'
 import { UserPlus, ShieldPlus, Users, Activity, CheckCircle } from 'lucide-react'
+import { useAuth } from '../auth'
 
 export const AdminDashboard = () => {
+  const { user } = useAuth()
   const location = useLocation()
   const navigate = useNavigate()
   const [view, setView] = useState<'stats' | 'addFacilitator' | 'addAdmin' | 'userList'>('stats')
   const [filterRole, setFilterRole] = useState<string | null>(null)
+  const [profile, setProfile] = useState(() => {
+    const saved = localStorage.getItem('soma_profile');
+    if (saved) return JSON.parse(saved);
+    return {
+      name: user?.email?.split('@')[0] || 'Admin',
+      avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=crop&q=80&w=150',
+    };
+  });
 
   useEffect(() => {
     if (location.pathname === '/admin/add-facilitator') setView('addFacilitator')
@@ -19,14 +29,24 @@ export const AdminDashboard = () => {
 
   useEffect(() => {
     const savedUsers = localStorage.getItem('soma_users');
+    
     if (savedUsers) {
       const users = JSON.parse(savedUsers);
+      
       setUserStats({
         students: users.filter((u: any) => u.role === 'Student').length,
         facilitators: users.filter((u: any) => u.role === 'Facilitator').length,
         admins: users.filter((u: any) => u.role === 'Admin').length
       });
     }
+
+    // Listen for profile changes
+    const handleStorageChange = () => {
+      const saved = localStorage.getItem('soma_profile');
+      if (saved) setProfile(JSON.parse(saved));
+    };
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
   }, [view]);
 
   const stats = [
