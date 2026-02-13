@@ -1,15 +1,31 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import DashboardLayout from '../components/DashboardLayout'
-import { Search, Filter, BookOpen, Users, School, ChevronDown, ChevronRight } from 'lucide-react'
+import { Search, Filter, BookOpen, Users, School, ChevronDown, MessageCircle, Send } from 'lucide-react'
+import { useAuth } from '../auth'
 
 export const EnrollmentDashboard = () => {
+  const { user } = useAuth()
   const [filterType, setFilterType] = useState<'courses' | 'schools'>('courses')
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedItem, setSelectedItem] = useState<string | null>(null)
   const [expandedItems, setExpandedItems] = useState<string[]>([])
   const [showDropdown, setShowDropdown] = useState(false)
+  const [comments, setComments] = useState<any[]>([])
+  const [newComment, setNewComment] = useState('')
 
-  // Mock data for courses
+  // Load comments from localStorage
+  useEffect(() => {
+    const savedComments = localStorage.getItem('soma_course_comments');
+    if (savedComments) {
+      setComments(JSON.parse(savedComments));
+    }
+  }, []);
+
+  // Save comments to localStorage
+  useEffect(() => {
+    localStorage.setItem('soma_course_comments', JSON.stringify(comments));
+  }, [comments]);
+
   const courses = [
     { id: 'c1', name: 'Advanced React Patterns', students: 240, school: 'Tech Academy' },
     { id: 'c2', name: 'Fullstack Architecture', students: 180, school: 'Tech Academy' },
@@ -18,7 +34,6 @@ export const EnrollmentDashboard = () => {
     { id: 'c5', name: 'Mobile Development', students: 200, school: 'Tech Academy' },
   ]
 
-  // Mock data for schools
   const schools = [
     { id: 's1', name: 'Tech Academy', students: 620, courses: 5 },
     { id: 's2', name: 'Design Institute', students: 480, courses: 3 },
@@ -26,8 +41,7 @@ export const EnrollmentDashboard = () => {
     { id: 's4', name: 'Business School', students: 290, courses: 4 },
   ]
 
-  // Mock students data
-  const studentsByCourse: { [key: string]: { id: string; name: string; email: string; date: string }[] } = {
+  const studentsByCourse = {
     'c1': [
       { id: 'st1', name: 'John Doe', email: 'john@example.com', date: '2024-01-15' },
       { id: 'st2', name: 'Jane Smith', email: 'jane@example.com', date: '2024-01-16' },
@@ -39,7 +53,7 @@ export const EnrollmentDashboard = () => {
     ],
   }
 
-  const studentsBySchool: { [key: string]: { id: string; name: string; email: string; date: string }[] } = {
+  const studentsBySchool = {
     's1': [
       { id: 'st1', name: 'John Doe', email: 'john@example.com', date: '2024-01-15' },
       { id: 'st2', name: 'Jane Smith', email: 'jane@example.com', date: '2024-01-16' },
@@ -67,10 +81,31 @@ export const EnrollmentDashboard = () => {
 
   const displayedItems = filterType === 'courses' ? filteredCourses : filteredSchools
 
+  // Comments handling
+  const handleAddComment = () => {
+    if (!newComment.trim() || !selectedItem || filterType !== 'courses' || !user) return;
+
+    const comment = {
+      id: Date.now().toString(),
+      courseId: selectedItem,
+      author: user.email?.split('@')[0] || 'Student',
+      authorEmail: user.email || 'student@example.com',
+      content: newComment,
+      timestamp: new Date().toLocaleString(),
+      replies: []
+    };
+
+    setComments(prev => [...prev, comment]);
+    setNewComment('');
+  };
+
+  const selectedCourseComments = selectedItem && filterType === 'courses' 
+    ? comments.filter((c: any) => c.courseId === selectedItem)
+    : [];
+
   return (
     <DashboardLayout title="Enrollment Dashboard">
       <div className="space-y-8">
-        {/* Filter Dropdown */}
         <div className="relative">
           <button
             onClick={() => setShowDropdown(!showDropdown)}
@@ -105,7 +140,6 @@ export const EnrollmentDashboard = () => {
           )}
         </div>
 
-        {/* Search Bar */}
         <div className="relative max-w-md">
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
           <input
@@ -117,9 +151,7 @@ export const EnrollmentDashboard = () => {
           />
         </div>
 
-        {/* Main Content - Split View */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          {/* Left Side - List */}
           <div className="bg-white/40 backdrop-blur-md border border-primary/10 rounded-[2rem] overflow-hidden">
             <div className="p-6 bg-primary/5 border-b border-primary/10">
               <h2 className="text-xl font-bold text-gray-900">
@@ -160,7 +192,7 @@ export const EnrollmentDashboard = () => {
                         <p className="text-sm text-gray-500">
                           {filterType === 'courses' 
                             ? `${item.students} students` 
-                            : `${item.students} students • ${item.courses} courses`
+                            : `${item.students} students - ${item.courses} courses`
                           }
                         </p>
                       </div>
@@ -173,7 +205,6 @@ export const EnrollmentDashboard = () => {
                     />
                   </button>
                   
-                  {/* Expanded Students List */}
                   {expandedItems.includes(item.id) && selectedItem === item.id && (
                     <div className="bg-primary/5 px-6 py-4 border-t border-primary/10">
                       <h4 className="text-sm font-bold text-gray-700 mb-3">
@@ -225,7 +256,6 @@ export const EnrollmentDashboard = () => {
             </div>
           </div>
 
-          {/* Right Side - Details Panel */}
           <div className="space-y-6">
             {selectedItem ? (
               <>
@@ -235,8 +265,6 @@ export const EnrollmentDashboard = () => {
                     const item = displayedItems.find((i: any) => i.id === selectedItem)
                     if (!item) return null
                     const isCourse = filterType === 'courses'
-                    const courseItem = item as { id: string; name: string; students: number; school: string }
-                    const schoolItem = item as { id: string; name: string; students: number; courses: number }
                     return (
                       <div className="space-y-4">
                         <div className="flex items-center gap-4">
@@ -248,22 +276,22 @@ export const EnrollmentDashboard = () => {
                             {filterType === 'courses' ? <BookOpen size={24} /> : <School size={24} />}
                           </div>
                           <div>
-                            <h4 className="font-bold text-gray-900">{isCourse ? courseItem.name : schoolItem.name}</h4>
+                            <h4 className="font-bold text-gray-900">{item.name}</h4>
                             <p className="text-sm text-gray-500">
-                              {isCourse ? courseItem.school : `${schoolItem.courses} courses`}
+                              {isCourse ? item.school : item.courses + ' courses'}
                             </p>
                           </div>
                         </div>
                         <div className="grid grid-cols-2 gap-4 pt-4 border-t border-primary/10">
                           <div className="text-center p-4 bg-primary/5 rounded-xl">
-                            <p className="text-2xl font-black text-primary">{isCourse ? courseItem.students : schoolItem.students}</p>
+                            <p className="text-2xl font-black text-primary">{item.students}</p>
                             <p className="text-xs font-bold text-gray-400 uppercase">
                               {filterType === 'courses' ? 'Students' : 'Total Students'}
                             </p>
                           </div>
                           <div className="text-center p-4 bg-primary/5 rounded-xl">
                             <p className="text-2xl font-black text-primary">
-                              {isCourse ? '100%' : schoolItem.courses}
+                              {isCourse ? '100%' : item.courses}
                             </p>
                             <p className="text-xs font-bold text-gray-400 uppercase">
                               {filterType === 'courses' ? 'Completion' : 'Courses'}
@@ -294,6 +322,62 @@ export const EnrollmentDashboard = () => {
                     </div>
                   </div>
                 </div>
+
+                {filterType === 'courses' && selectedItem && (
+                  <div className="bg-white/40 backdrop-blur-md border border-primary/10 rounded-[2rem] p-6">
+                    <div className="flex items-center justify-between mb-4">
+                      <h3 className="text-lg font-bold text-gray-900 flex items-center gap-2">
+                        <MessageCircle size={20} />
+                        Course Comments
+                      </h3>
+                      <span className="text-xs font-bold text-gray-400 bg-primary/10 px-3 py-1 rounded-full">
+                        {selectedCourseComments.length}
+                      </span>
+                    </div>
+
+                    <div className="flex gap-2 mb-4">
+                      <input
+                        type="text"
+                        placeholder="Ask a question or share your thoughts..."
+                        value={newComment}
+                        onChange={(e) => setNewComment(e.target.value)}
+                        onKeyPress={(e) => e.key === 'Enter' && handleAddComment()}
+                        className="flex-1 bg-white/60 border border-primary/10 rounded-lg px-4 py-2 text-sm outline-none focus:ring-2 focus:ring-primary/20"
+                      />
+                      <button
+                        onClick={handleAddComment}
+                        className="px-4 py-2 bg-primary text-white rounded-lg font-bold text-sm hover:bg-primary-dark transition-all flex items-center gap-2"
+                      >
+                        <Send size={14} />
+                      </button>
+                    </div>
+
+                    <div className="space-y-3 max-h-64 overflow-y-auto">
+                      {selectedCourseComments.length > 0 ? (
+                        selectedCourseComments.map((comment: any) => (
+                          <div key={comment.id} className="bg-white/40 rounded-xl p-3">
+                            <div className="flex items-start gap-2">
+                              <div className="w-8 h-8 bg-primary rounded-full flex items-center justify-center text-white font-bold text-xs flex-shrink-0">
+                                {comment.author.charAt(0)}
+                              </div>
+                              <div className="flex-1">
+                                <div className="flex items-center gap-2">
+                                  <span className="font-semibold text-sm text-gray-900">{comment.author}</span>
+                                  <span className="text-xs text-gray-400">{comment.timestamp}</span>
+                                </div>
+                                <p className="text-sm text-gray-700">{comment.content}</p>
+                              </div>
+                            </div>
+                          </div>
+                        ))
+                      ) : (
+                        <p className="text-sm text-gray-400 italic text-center py-4">
+                          No comments yet. Be the first to comment!
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                )}
               </>
             ) : (
               <div className="bg-white/40 backdrop-blur-md border border-primary/10 rounded-[2rem] p-8 text-center">

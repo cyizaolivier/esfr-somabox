@@ -187,6 +187,12 @@ export const AdminDashboard = () => {
             Add Facilitator
           </button>
           <button 
+            onClick={() => { setView('userList'); setFilterRole('Facilitator'); }}
+            className={`pb-2 px-4 text-sm font-bold transition-all ${view === 'userList' && filterRole === 'Facilitator' ? 'text-primary border-b-2 border-primary' : 'text-gray-400 hover:text-gray-600'}`}
+          >
+            View Facilitators
+          </button>
+          <button 
             onClick={() => navigate('/admin/add-admin')}
             className={`pb-2 px-4 text-sm font-bold transition-all ${view === 'addAdmin' ? 'text-primary border-b-2 border-primary' : 'text-gray-400 hover:text-gray-600'}`}
           >
@@ -219,3 +225,5 @@ export const AdminDashboard = () => {
     </DashboardLayout>
   )
 }
+
+export default AdminDashboard
