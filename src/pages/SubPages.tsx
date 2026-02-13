@@ -26,13 +26,13 @@ export const Library = () => (
 
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-x-8 md:gap-y-10">
             {[ 
-                { name: 'Chemistry', img: 'https://images.unsplash.com/photo-1532187875605-186c6af84c5c?auto=format&fit=crop&q=80&w=400' },
+                { name: 'Chemistry', img: 'https://images.unsplash.com/photo-1636466497217-26a8cbeaf0aa?auto=format&fit=crop&q=80&w=400' },
                 { name: 'Chemistry', img: 'https://images.unsplash.com/photo-1603126857599-f6e157fa2fe6?auto=format&fit=crop&q=80&w=400' },
                 { name: 'Physics', img: 'https://images.unsplash.com/photo-1636466497217-26a8cbeaf0aa?auto=format&fit=crop&q=80&w=400' },
                 { name: 'Physics', img: 'https://images.unsplash.com/photo-1635070041078-e363dbe005cb?auto=format&fit=crop&q=80&w=400' },
-                { name: 'Math', img: 'https://images.unsplash.com/photo-1509228468518-180dd482195e?auto=format&fit=crop&q=80&w=400' },
-                { name: 'Math', img: 'https://images.unsplash.com/photo-1635070040809-953434aa0563?auto=format&fit=crop&q=80&w=400' },
-                { name: 'English', img: 'https://images.unsplash.com/photo-1585829365234-754d9c792940?auto=format&fit=crop&q=80&w=400' },
+                { name: 'Math', img: 'https://images.unsplash.com/photo-1456513080510-7bf3a84b82f8?auto=format&fit=crop&q=80&w=400' },
+                { name: 'Chemistry', img: 'https://images.unsplash.com/photo-1603126857599-f6e157fa2fe6?auto=format&fit=crop&q=80&w=400' },
+                { name: 'English', img: 'https://images.unsplash.com/photo-1636466497217-26a8cbeaf0aa?auto=format&fit=crop&q=80&w=400' },
                 { name: 'English', img: 'https://images.unsplash.com/photo-1456513080510-7bf3a84b82f8?auto=format&fit=crop&q=80&w=400' }
             ].map((book, i) => (
                 <div key={i} className="flex flex-col gap-3 group">
@@ -116,14 +116,28 @@ export const Programs = () => {
         const newProfile = { ...profile, grade: currentGrade };
         setProfile(newProfile);
         localStorage.setItem('soma_profile', JSON.stringify(newProfile));
+        
+        // Initialize student progress with courses from this grade
+        const studentProgress = {
+            email: newProfile.name || 'student',
+            courses: mockCourses.map(course => ({
+                courseId: `${currentGrade}-${course.id}`,
+                courseName: course.name,
+                progress: 0,
+                status: 'pending' as const,
+                lastUpdated: new Date().toISOString()
+            }))
+        };
+        localStorage.setItem('soma_student_progress', JSON.stringify(studentProgress));
+        
         // Trigger storage event for Dashboard
         window.dispatchEvent(new Event('storage'));
         alert(`Successfully enrolled in ${currentGrade}!`);
     };
 
     const mockCourses = [
-        { id: 1, name: 'Mathematics', teacher: 'Emma Kent', img: 'https://images.unsplash.com/photo-1509228468518-180dd482195e?auto=format&fit=crop&q=80&w=400' },
-        { id: 2, name: 'Biology', teacher: 'Gren Harry', img: 'https://images.unsplash.com/photo-1532187875605-186c6af84c5c?auto=format&fit=crop&q=80&w=400' },
+        { id: 1, name: 'Mathematics', teacher: 'Emma Kent', img: 'https://images.unsplash.com/photo-1636466497217-26a8cbeaf0aa?auto=format&fit=crop&q=80&w=400' },
+        { id: 2, name: 'Biology', teacher: 'Gren Harry', img: 'https://images.unsplash.com/photo-1603126857599-f6e157fa2fe6?auto=format&fit=crop&q=80&w=400' },
         { id: 3, name: 'Physics', teacher: 'Sarah Lex', img: 'https://images.unsplash.com/photo-1636466497217-26a8cbeaf0aa?auto=format&fit=crop&q=80&w=400' },
         { id: 4, name: 'Chemistry', teacher: 'Hella Anna', img: 'https://images.unsplash.com/photo-1603126857599-f6e157fa2fe6?auto=format&fit=crop&q=80&w=400' },
     ];

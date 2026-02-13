@@ -8,33 +8,16 @@ export const FacilitatorDashboard = () => {
   const { user } = useAuth()
   const location = useLocation()
   const isCoursesView = location.pathname === '/facilitator/courses'
-  const [view, setView] = useState<'stats' | 'studentList' | 'messages'>('stats')
+  const [view, setView] = React.useState<'stats' | 'studentList' | 'messages'>('stats')
 
-  const [studentCount, setStudentCount] = useState(0);
-  const [profile, setProfile] = useState(() => {
-    const saved = localStorage.getItem('soma_profile');
-    if (saved) return JSON.parse(saved);
-    return {
-      name: user?.email?.split('@')[0] || 'Facilitator',
-      avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=crop&q=80&w=150',
-    };
-  });
+  const [studentCount, setStudentCount] = React.useState(0);
 
-  useEffect(() => {
-    // Load student count
+  React.useEffect(() => {
     const savedUsers = localStorage.getItem('soma_users');
     if (savedUsers) {
       const users = JSON.parse(savedUsers);
       setStudentCount(users.filter((u: any) => u.role === 'Student').length);
     }
-
-    // Listen for profile changes
-    const handleStorageChange = () => {
-      const saved = localStorage.getItem('soma_profile');
-      if (saved) setProfile(JSON.parse(saved));
-    };
-    window.addEventListener('storage', handleStorageChange);
-    return () => window.removeEventListener('storage', handleStorageChange);
   }, [view]);
 
   const stats = [

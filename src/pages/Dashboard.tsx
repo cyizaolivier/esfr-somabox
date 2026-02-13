@@ -4,6 +4,19 @@ import { useAuth } from '../auth'
 import Sidebar from '../components/Sidebar'
 import { Bell, CheckSquare, MoreHorizontal, ClipboardList, Menu, Activity } from 'lucide-react'
 
+interface CourseProgress {
+  courseId: string;
+  courseName: string;
+  progress: number;
+  status: 'completed' | 'in-progress' | 'pending';
+  lastUpdated: string;
+}
+
+interface StudentProgress {
+  email: string;
+  courses: CourseProgress[];
+}
+
 export default function Dashboard() {
   const { user } = useAuth()
   const navigate = useNavigate()
@@ -32,6 +45,22 @@ export default function Dashboard() {
     return () => window.removeEventListener('storage', handleStorageChange);
   }, []);
 
+  // Load student progress from localStorage
+  const [studentProgress, setStudentProgress] = useState<StudentProgress>(() => {
+    const saved = localStorage.getItem('soma_student_progress');
+    if (saved) return JSON.parse(saved);
+    return { email: user?.email || '', courses: [] };
+  });
+
+  // Calculate real statistics
+  const completedCount = studentProgress.courses.filter(c => c.status === 'completed').length;
+  const pendingCount = studentProgress.courses.filter(c => c.status === 'pending').length;
+  const inProgressCount = studentProgress.courses.filter(c => c.status === 'in-progress').length;
+  const totalCourses = studentProgress.courses.length;
+  const overallProgress = totalCourses > 0 
+    ? Math.round(studentProgress.courses.reduce((sum, c) => sum + c.progress, 0) / totalCourses)
+    : 0;
+
   const chats = [
     { id: 1, name: "Emma Kent", msg: "Hey...!", time: "12:00 AM", online: true, avatar: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?auto=format&fit=crop&q=80&w=100" },
     { id: 2, name: "Gren Harry", msg: "Hey...!", time: "12:00 AM", online: true, avatar: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&q=80&w=100" },
@@ -41,16 +70,25 @@ export default function Dashboard() {
     { id: 6, name: "Ava Gary", msg: "Hey...!", time: "12:00 AM", online: false, avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=100" },
   ]
 
-  const courses = [
-    { id: 1, title: "English", progress: 45, image: "https://images.unsplash.com/photo-1456513080510-7bf3a84b82f8?auto=format&fit=crop&q=80&w=400" },
-    { id: 2, title: "Social Science", progress: 75, image: "https://images.unsplash.com/photo-1522202176988-66273c2fd55f?auto=format&fit=crop&q=80&w=400" },
-  ]
+  // Get real course data from progress
+  const courses = studentProgress.courses
+    .filter(c => c.status === 'in-progress' || c.status === 'completed')
+    .slice(0, 2)
+    .map(c => ({
+      id: c.courseId,
+      title: c.courseName,
+      progress: c.progress,
+      image: "https://images.unsplash.com/photo-1456513080510-7bf3a84b82f8?auto=format&fit=crop&q=80&w=400"
+    }));
 
-  const progressData = [
-    { subject: "Chemistry", chapter: "Chapter 1", progress: 85 },
-    { subject: "English", chapter: "Chapter 2", progress: 65 },
-    { subject: "Mathematics", chapter: "Chapter 3", progress: 45 },
-  ]
+  // Get real progress data
+  const progressData = studentProgress.courses
+    .slice(0, 3)
+    .map(c => ({
+      subject: c.courseName,
+      chapter: c.status === 'completed' ? 'Completed' : c.status === 'in-progress' ? 'In Progress' : 'Not Started',
+      progress: c.progress
+    }));
 
   return (
     <div className="flex min-h-screen bg-primary-surface">
@@ -118,12 +156,12 @@ export default function Dashboard() {
                         fill="transparent"
                         className="text-primary"
                         strokeDasharray="264%"
-                        strokeDashoffset={`${264 * (1 - 0.75)}%`}
+                        strokeDashoffset={`${264 * (1 - overallProgress / 100)}%`}
                         strokeLinecap="round"
                       />
                     </svg>
                     <div className="absolute inset-0 flex flex-col items-center justify-center">
-                      <span className="text-2xl md:text-4xl font-black text-primary">75%</span>
+                      <span className="text-2xl md:text-4xl font-black text-primary">{overallProgress}%</span>
                       <span className="text-[10px] md:text-xs font-bold text-gray-400 gap-1 uppercase tracking-wider">Complete</span>
                     </div>
                   </div>
@@ -131,9 +169,9 @@ export default function Dashboard() {
                   {/* Stats */}
                   <div className="flex-1 w-full grid grid-cols-1 md:grid-cols-2 gap-4">
                     {[
-                      { label: "Completed", value: "90%", color: "bg-primary/10 text-primary", icon: CheckSquare },
-                      { label: "Pending", value: "85%", color: "bg-orange-500/10 text-orange-600", icon: ClipboardList },
-                      { label: "In Progress", value: "70%", color: "bg-blue-500/10 text-blue-600", icon: Activity },
+                      { label: "Completed", value: completedCount, total: totalCourses, color: "bg-primary/10 text-primary", icon: CheckSquare },
+                      { label: "Pending", value: pendingCount, total: totalCourses, color: "bg-orange-500/10 text-orange-600", icon: ClipboardList },
+                      { label: "In Progress", value: inProgressCount, total: totalCourses, color: "bg-blue-500/10 text-blue-600", icon: Activity },
                     ].map((stat, i) => (
                       <div key={i} className="flex items-center gap-4 p-4 bg-white/20 rounded-2xl border border-white/40">
                         <div className={`w-10 h-10 md:w-12 md:h-12 ${stat.color} rounded-xl flex items-center justify-center flex-shrink-0`}>
@@ -141,7 +179,9 @@ export default function Dashboard() {
                         </div>
                         <div className="flex-1">
                           <div className="text-[10px] md:text-xs font-bold text-gray-400 uppercase">{stat.label}</div>
-                          <div className="text-base md:text-lg font-black text-gray-800">{stat.value}</div>
+                          <div className="text-base md:text-lg font-black text-gray-800">
+                            {stat.value} {stat.total > 0 && `/ ${stat.total}`}
+                          </div>
                         </div>
                       </div>
                     ))}
@@ -166,25 +206,32 @@ export default function Dashboard() {
                     View Library
                   </button>
                 </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 md:gap-8">
-                  {courses.map(course => (
-                    <div key={course.id} className="space-y-4 group cursor-pointer">
-                      <div className="relative aspect-[16/9] rounded-2xl md:rounded-[2rem] overflow-hidden shadow-sm group-hover:shadow-xl transition-all duration-500">
-                        <img src={course.image} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" alt={course.title} />
-                        <div className="absolute inset-0 bg-primary/20 opacity-0 group-hover:opacity-100 transition-opacity" />
-                      </div>
-                      <div className="px-1">
-                        <div className="flex items-center justify-between gap-4 mb-2">
-                          <span className="font-bold text-gray-800 text-sm md:text-base truncate">{course.title}</span>
-                          <span className="text-[10px] font-black text-primary">{course.progress}%</span>
+                {courses.length === 0 ? (
+                  <div className="text-center py-12">
+                    <div className="text-gray-400 text-sm mb-2">No courses yet</div>
+                    <div className="text-gray-500 text-xs">Enroll in a grade to start learning</div>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 md:gap-8">
+                    {courses.map(course => (
+                      <div key={course.id} className="space-y-4 group cursor-pointer">
+                        <div className="relative aspect-[16/9] rounded-2xl md:rounded-[2rem] overflow-hidden shadow-sm group-hover:shadow-xl transition-all duration-500">
+                          <img src={course.image} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" alt={course.title} />
+                          <div className="absolute inset-0 bg-primary/20 opacity-0 group-hover:opacity-100 transition-opacity" />
                         </div>
-                        <div className="h-1.5 bg-primary/5 rounded-full overflow-hidden">
-                          <div className="h-full bg-primary rounded-full" style={{ width: `${course.progress}%` }}></div>
+                        <div className="px-1">
+                          <div className="flex items-center justify-between gap-4 mb-2">
+                            <span className="font-bold text-gray-800 text-sm md:text-base truncate">{course.title}</span>
+                            <span className="text-[10px] font-black text-primary">{course.progress}%</span>
+                          </div>
+                          <div className="h-1.5 bg-primary/5 rounded-full overflow-hidden">
+                            <div className="h-full bg-primary rounded-full" style={{ width: `${course.progress}%` }}></div>
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  ))}
-                </div>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
 
@@ -229,24 +276,31 @@ export default function Dashboard() {
               {/* Performance */}
               <div className="bg-white/30 backdrop-blur-xl rounded-[2rem] md:rounded-[3rem] p-6 md:p-8 border border-primary/10 shadow-sm">
                 <h2 className="text-lg md:text-xl font-bold text-gray-800 mb-6">Performance</h2>
-                <div className="space-y-4">
-                  {progressData.map((item, i) => (
-                    <div key={i} className="p-4 bg-primary-surface/40 rounded-[1.5rem] border border-primary/5 space-y-3">
-                      <div className="flex justify-between items-start">
-                        <div className="text-left">
-                          <div className="text-xs md:text-sm font-bold text-gray-800 leading-none">{item.subject}</div>
-                          <div className="text-[9px] md:text-[10px] text-gray-400 font-bold uppercase mt-1 tracking-tight">{item.chapter}</div>
+                {progressData.length === 0 ? (
+                  <div className="text-center py-12">
+                    <div className="text-gray-400 text-sm mb-2">No performance data yet</div>
+                    <div className="text-gray-500 text-xs">Start learning to track your progress</div>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {progressData.map((item, i) => (
+                      <div key={i} className="p-4 bg-primary-surface/40 rounded-[1.5rem] border border-primary/5 space-y-3">
+                        <div className="flex justify-between items-start">
+                          <div className="text-left">
+                            <div className="text-xs md:text-sm font-bold text-gray-800 leading-none">{item.subject}</div>
+                            <div className="text-[9px] md:text-[10px] text-gray-400 font-bold uppercase mt-1 tracking-tight">{item.chapter}</div>
+                          </div>
+                          <span className="text-[10px] font-black text-primary bg-primary/10 px-2 py-0.5 rounded-md">
+                            {item.progress}%
+                          </span>
                         </div>
-                        <span className="text-[10px] font-black text-primary bg-primary/10 px-2 py-0.5 rounded-md">
-                          {item.progress}%
-                        </span>
+                        <div className="h-1.5 bg-primary/5 rounded-full overflow-hidden">
+                          <div className="h-full bg-primary rounded-full transition-all duration-1000" style={{ width: `${item.progress}%` }}></div>
+                        </div>
                       </div>
-                      <div className="h-1.5 bg-primary/5 rounded-full overflow-hidden">
-                        <div className="h-full bg-primary rounded-full transition-all duration-1000" style={{ width: `${item.progress}%` }}></div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
           </div>
