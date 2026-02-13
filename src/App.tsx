@@ -4,6 +4,7 @@ import SignIn from './pages/SignIn'
 import SignUp from './pages/SignUp'
 import Dashboard from './pages/Dashboard'
 import { AdminDashboard } from './pages/AdminDashboard'
+import { EnrollmentDashboard } from './pages/EnrollmentDashboard'
 import { FacilitatorDashboard } from './pages/FacilitatorDashboard'
 import { Library, Programs, Messages, Settings } from './pages/SubPages'
 import { AuthProvider, useAuth, UserRole } from './auth'
@@ -86,6 +87,14 @@ export default function App() {
         />
 
         {/* Admin Routes */}
+        <Route
+          path="/admin/enrollment"
+          element={
+            <RoleRoute allowedRoles={['Admin']}>
+              <EnrollmentDashboard />
+            </RoleRoute>
+          }
+        />
         <Route
           path="/admin/dashboard"
           element={

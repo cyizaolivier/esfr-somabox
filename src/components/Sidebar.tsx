@@ -10,7 +10,11 @@ import {
   X,
   UserPlus,
   ShieldPlus,
-  BookMarked
+  BookMarked,
+  Users,
+  TrendingUp,
+  ListTodo,
+  GraduationCap
 } from 'lucide-react';
 import { useAuth } from '../auth';
 
@@ -35,6 +39,7 @@ const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
       case 'Admin':
         return [
           { icon: LayoutDashboard, label: 'Dashboard', path: '/admin/dashboard' },
+          { icon: GraduationCap, label: 'Enrollment Dashboard', path: '/admin/enrollment' },
           { icon: UserPlus, label: 'Add Facilitator', path: '/admin/add-facilitator' },
           { icon: ShieldPlus, label: 'Add Admin', path: '/admin/add-admin' },
           { icon: Settings, label: 'Settings', path: '/settings' },
@@ -42,7 +47,10 @@ const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
       case 'Facilitator':
         return [
           { icon: LayoutDashboard, label: 'Dashboard', path: '/facilitator/dashboard' },
-          { icon: BookMarked, label: 'Courses', path: '/facilitator/courses' },
+          { icon: BookMarked, label: 'My Courses', path: '/facilitator/courses' },
+          { icon: Users, label: 'Students', path: '/facilitator/students' },
+          { icon: TrendingUp, label: 'Progress Tracking', path: '/facilitator/progress' },
+          { icon: ListTodo, label: 'Messages', path: '/facilitator/messages' },
           { icon: Settings, label: 'Settings', path: '/settings' },
         ];
       default:
