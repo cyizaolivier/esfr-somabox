@@ -38,7 +38,7 @@ export default function SignUp() {
       {/* Left Column - Image & Branding */}
       <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden bg-primary">
         <img 
-          src="https://images.unsplash.com/photo-1523240795204-d076406ac051?auto=format&fit=crop&q=80&w=1000" 
+          src="https://media.istockphoto.com/id/2226385991/photo/happy-group-of-students-studying-together-at-the-library.webp?a=1&b=1&s=612x612&w=0&k=20&c=b6rhWOe7dRwbk_Cvsedg4vem3I9MW6Ui2n26jgu5fXg=" 
           alt="Students learning"
           className="absolute inset-0 w-full h-full object-cover opacity-30 mix-blend-overlay"
         />
@@ -188,4 +188,3 @@ export default function SignUp() {
     </div>
   )
 }
-

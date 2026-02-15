@@ -2,23 +2,56 @@ import React, { useState, useEffect } from 'react'
 import { useLocation } from 'react-router-dom'
 import DashboardLayout from '../components/DashboardLayout'
 import { useAuth } from '../auth'
-import { BookOpen, Users, Star, Clock, PlayCircle, Plus, TrendingUp, FileCheck, MessageSquare, Send } from 'lucide-react'
+import { BookOpen, Users, TrendingUp, Clock, PlayCircle, Plus, MessageSquare, Send, FileCheck, MessageCircle, Star } from 'lucide-react'
+
+// Comment interface
+interface Comment {
+  id: string
+  courseId: string
+  author: string
+  authorEmail: string
+  content: string
+  timestamp: string
+  replies: Reply[]
+}
+
+interface Reply {
+  id: string
+  author: string
+  authorEmail: string
+  content: string
+  timestamp: string
+}
 
 export const FacilitatorDashboard = () => {
   const { user } = useAuth()
   const location = useLocation()
   const isCoursesView = location.pathname === '/facilitator/courses'
-  const [view, setView] = React.useState<'stats' | 'studentList' | 'messages'>('stats')
+  const [view, setView] = useState<'stats' | 'studentList' | 'messages' | 'comments'>('stats')
 
-  const [studentCount, setStudentCount] = React.useState(0);
+  const [studentCount, setStudentCount] = useState(0)
+  const [comments, setComments] = useState<Comment[]>([])
+  const [selectedCourseId, setSelectedCourseId] = useState<string | null>(null)
+  const [newReply, setNewReply] = useState('')
 
-  React.useEffect(() => {
+  useEffect(() => {
     const savedUsers = localStorage.getItem('soma_users');
     if (savedUsers) {
       const users = JSON.parse(savedUsers);
       setStudentCount(users.filter((u: any) => u.role === 'Student').length);
     }
-  }, [view]);
+
+    // Load comments from localStorage
+    const savedComments = localStorage.getItem('soma_course_comments');
+    if (savedComments) {
+      setComments(JSON.parse(savedComments));
+    }
+  }, []);
+
+  useEffect(() => {
+    // Save comments to localStorage whenever they change
+    localStorage.setItem('soma_course_comments', JSON.stringify(comments));
+  }, [comments]);
 
   const stats = [
     { label: 'Total Courses', value: '0', icon: BookOpen, color: 'bg-blue-50 text-blue-600' },
@@ -28,9 +61,9 @@ export const FacilitatorDashboard = () => {
   ]
 
   const myCourses = [
-    { id: 1, title: 'Advanced React Patterns', students: '240', progress: 85, image: 'https://images.unsplash.com/photo-1633356122544-f134324a6cee?auto=format&fit=crop&q=80&w=400' },
-    { id: 2, title: 'Fullstack Architecture', students: '180', progress: 70, image: 'https://images.unsplash.com/photo-1498050108023-c5249f4df085?auto=format&fit=crop&q=80&w=400' },
-    { id: 3, title: 'UI/UX Design Systems', students: '320', progress: 95, image: 'https://images.unsplash.com/photo-1541462608141-ad43bddee296?auto=format&fit=crop&q=80&w=400' },
+    { id: 'c1', title: 'Advanced React Patterns', students: '240', progress: 85, image: 'https://images.unsplash.com/photo-1633356122544-f134324a6cee?auto=format&fit=crop&q=80&w=400' },
+    { id: 'c2', title: 'Fullstack Architecture', students: '180', progress: 70, image: 'https://images.unsplash.com/photo-1498050108023-c5249f4df085?auto=format&fit=crop&q=80&w=400' },
+    { id: 'c3', title: 'UI/UX Design Systems', students: '320', progress: 95, image: 'https://images.unsplash.com/photo-1541462608141-ad43bddee296?auto=format&fit=crop&q=80&w=400' },
   ]
 
   const recentMessages = [
@@ -132,11 +165,149 @@ export const FacilitatorDashboard = () => {
     );
   }
 
+  const CourseComments = () => {
+    const handleAddReply = (commentId: string) => {
+      if (!newReply.trim() || !user) return;
+
+      const reply: Reply = {
+        id: Date.now().toString(),
+        author: user.email?.split('@')[0] || 'Facilitator',
+        authorEmail: user.email || 'facilitator@example.com',
+        content: newReply,
+        timestamp: new Date().toLocaleString()
+      };
+
+      setComments(prev => prev.map(c => 
+        c.id === commentId 
+          ? { ...c, replies: [...c.replies, reply] }
+          : c
+      ));
+      setNewReply('');
+    };
+
+    const selectedCourseComments = comments.filter(c => c.courseId === selectedCourseId);
+
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <h2 className="text-2xl font-bold text-gray-900">Course Comments</h2>
+          <button 
+            onClick={() => { setView('stats'); setSelectedCourseId(null); }}
+            className="text-primary font-bold text-sm hover:underline"
+          >
+            Back to Overview
+          </button>
+        </div>
+
+        {/* Course Selector */}
+        <div className="bg-white/40 backdrop-blur-md border border-primary/10 rounded-[2rem] p-6">
+          <h3 className="font-bold text-gray-900 mb-4">Select a Course</h3>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            {myCourses.map((course) => (
+              <button
+                key={course.id}
+                onClick={() => setSelectedCourseId(course.id)}
+                className={`p-4 rounded-xl border transition-all ${
+                  selectedCourseId === course.id
+                    ? 'bg-primary text-white border-primary'
+                    : 'bg-white/40 border-primary/10 hover:border-primary/30'
+                }`}
+              >
+                <p className="font-bold text-sm truncate">{course.title}</p>
+                <p className={`text-xs mt-1 ${selectedCourseId === course.id ? 'text-white/70' : 'text-gray-500'}`}>
+                  {comments.filter(c => c.courseId === course.id).length} comments
+                </p>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Comments List */}
+        {selectedCourseId && (
+          <div className="bg-white/40 backdrop-blur-md border border-primary/10 rounded-[2rem] overflow-hidden">
+            <div className="p-6 bg-primary/5 border-b border-primary/10">
+              <h3 className="font-bold text-gray-900">
+                {myCourses.find(c => c.id === selectedCourseId)?.title} - Comments
+              </h3>
+            </div>
+
+            <div className="divide-y divide-primary/5">
+              {selectedCourseComments.length > 0 ? (
+                selectedCourseComments.map((comment) => (
+                  <div key={comment.id} className="p-6">
+                    {/* Main Comment */}
+                    <div className="flex items-start gap-4">
+                      <div className="w-10 h-10 bg-primary rounded-full flex items-center justify-center text-white font-bold flex-shrink-0">
+                        {comment.author.charAt(0)}
+                      </div>
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="font-semibold text-gray-900">{comment.author}</span>
+                          <span className="text-xs text-gray-400">{comment.timestamp}</span>
+                        </div>
+                        <p className="text-gray-700">{comment.content}</p>
+                      </div>
+                    </div>
+
+                    {/* Replies */}
+                    {comment.replies.length > 0 && (
+                      <div className="ml-14 mt-4 space-y-4">
+                        {comment.replies.map((reply) => (
+                          <div key={reply.id} className="flex items-start gap-3">
+                            <div className="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center text-white font-bold text-xs flex-shrink-0">
+                              {reply.author.charAt(0)}
+                            </div>
+                            <div className="flex-1">
+                              <div className="flex items-center gap-2 mb-1">
+                                <span className="font-semibold text-sm text-gray-900">{reply.author}</span>
+                                <span className="text-xs text-gray-400">{reply.timestamp}</span>
+                              </div>
+                              <p className="text-sm text-gray-600">{reply.content}</p>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Reply Input */}
+                    <div className="ml-14 mt-4 flex gap-2">
+                      <input
+                        type="text"
+                        placeholder="Write a reply..."
+                        value={newReply}
+                        onChange={(e) => setNewReply(e.target.value)}
+                        onKeyPress={(e) => e.key === 'Enter' && handleAddReply(comment.id)}
+                        className="flex-1 bg-white/60 border border-primary/10 rounded-lg px-4 py-2 text-sm outline-none focus:ring-2 focus:ring-primary/20"
+                      />
+                      <button
+                        onClick={() => handleAddReply(comment.id)}
+                        className="px-4 py-2 bg-primary text-white rounded-lg font-bold text-sm hover:bg-primary-dark transition-all flex items-center gap-2"
+                      >
+                        <Send size={14} /> Reply
+                      </button>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className="px-6 py-20 text-center text-gray-400 font-bold italic">
+                  No comments yet. Students can add comments when they enroll in this course.
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // Get total comment count
+  const totalComments = comments.length;
+
   return (
     <DashboardLayout title={isCoursesView ? "My Courses" : "Facilitator Dashboard"}>
       <div className="space-y-10">
         {!isCoursesView && view === 'stats' && (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6">
             {stats.map((stat, i) => (
               <div 
                 key={i} 
@@ -153,6 +324,18 @@ export const FacilitatorDashboard = () => {
                 <div className="text-2xl font-black text-gray-900 mt-1">{stat.value}</div>
               </div>
             ))}
+
+            {/* Comments Card */}
+            <div 
+              onClick={() => setView('comments')}
+              className="p-6 bg-white/40 backdrop-blur-md border border-primary/10 rounded-[2rem] shadow-sm hover:shadow-md transition-all cursor-pointer group"
+            >
+              <div className="w-12 h-12 bg-purple-50 text-purple-600 rounded-2xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                <MessageCircle size={24} />
+              </div>
+              <div className="text-sm font-bold text-gray-400">Course Comments</div>
+              <div className="text-2xl font-black text-gray-900 mt-1">{totalComments}</div>
+            </div>
           </div>
         )}
 
@@ -238,6 +421,7 @@ export const FacilitatorDashboard = () => {
 
         {!isCoursesView && view === 'studentList' && <StudentList />}
         {!isCoursesView && view === 'messages' && <RecentMessages />}
+        {!isCoursesView && view === 'comments' && <CourseComments />}
 
         {/* Courses Section */}
         <div className="space-y-6">
@@ -283,3 +467,5 @@ export const FacilitatorDashboard = () => {
     </DashboardLayout>
   )
 }
+
+export default FacilitatorDashboard

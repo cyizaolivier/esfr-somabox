@@ -2,7 +2,7 @@ import React from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import Sidebar from '../components/Sidebar'
 import DashboardLayout from '../components/DashboardLayout'
-import { Book, Bookmark, Folder, Search, User, Shield, Bell, HardDrive, PlayCircle, ChevronRight, ArrowLeft, Mail, Download, MoreHorizontal, Paperclip, Send, Menu, MessageSquare, Trash2, CheckSquare } from 'lucide-react'
+import { Book, Bookmark, Folder, Search, User, Shield, Bell, HardDrive, PlayCircle, ChevronRight, ArrowLeft, Mail, Download, MoreHorizontal, Paperclip, Send, Menu, MessageSquare, Trash2, CheckSquare, Upload, X } from 'lucide-react'
 import { useAuth } from '../auth'
 import rwandanProgramImg from '../assets/Rwandan program.jpg'
 import internationalProgramImg from '../assets/international program.jpg'
@@ -601,6 +601,32 @@ export const Settings = () => {
         };
     });
 
+    // State for uploaded avatar image
+    const [uploadedAvatar, setUploadedAvatar] = React.useState<string | null>(null);
+
+    // Handle image file upload and convert to base64
+    const handleAvatarUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (file) {
+            // Validate file type
+            if (!file.type.startsWith('image/')) {
+                alert('Please select an image file');
+                return;
+            }
+            // Validate file size (max 2MB)
+            if (file.size > 2 * 1024 * 1024) {
+                alert('Image size must be less than 2MB');
+                return;
+            }
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                const result = event.target?.result as string;
+                setUploadedAvatar(result);
+            };
+            reader.readAsDataURL(file);
+        }
+    };
+
     // Notification settings state
     const [notifications, setNotifications] = React.useState(() => {
         const saved = localStorage.getItem('soma_notifications');
@@ -623,13 +649,15 @@ export const Settings = () => {
         e.preventDefault();
         const formData = new FormData(e.target as HTMLFormElement);
         const newEmail = formData.get('email') as string;
+        // Use uploaded avatar if available, otherwise use URL input or keep existing
+        const avatarUrl = formData.get('avatar') as string;
         const newProfile = {
             ...profile,
             name: formData.get('name') as string,
             email: newEmail,
             phone: formData.get('phone') as string,
             grade: formData.get('grade') as string,
-            avatar: formData.get('avatar') as string,
+            avatar: uploadedAvatar || avatarUrl || profile.avatar,
         };
         setProfile(newProfile);
         localStorage.setItem('soma_profile', JSON.stringify(newProfile));
@@ -637,6 +665,8 @@ export const Settings = () => {
         window.dispatchEvent(new Event('storage'));
         updateUser(newEmail);
         setActiveSection('main');
+        // Reset uploaded avatar after save
+        setUploadedAvatar(null);
     };
 
     const handlePasswordSubmit = (e: React.FormEvent) => {
@@ -705,13 +735,51 @@ export const Settings = () => {
                             />
                         </div>
                         <div className="space-y-2">
-                            <label className="text-sm font-bold text-gray-700 block">Avatar URL</label>
+                            <label className="text-sm font-bold text-gray-700 block">Profile Photo</label>
+                            <div className="flex items-center gap-4">
+                                <div className="relative">
+                                    <img 
+                                        src={uploadedAvatar || profile.avatar} 
+                                        alt="Avatar" 
+                                        className="w-20 h-20 rounded-full object-cover border-2 border-primary/20"
+                                    />
+                                    {uploadedAvatar && (
+                                        <div className="absolute inset-0 bg-black/30 rounded-full flex items-center justify-center">
+                                            <CheckSquare size={20} className="text-white" />
+                                        </div>
+                                    )}
+                                </div>
+                                <div className="flex-1">
+                                    <div className="flex items-center gap-2">
+                                        <label className="flex items-center gap-2 px-4 py-2.5 bg-primary text-white rounded-xl font-bold cursor-pointer hover:bg-primary-dark transition-all w-fit">
+                                            <Upload size={18} />
+                                            Upload Image
+                                            <input 
+                                                type="file"
+                                                accept="image/*"
+                                                onChange={handleAvatarUpload}
+                                                className="hidden"
+                                            />
+                                        </label>
+                                        {uploadedAvatar && (
+                                            <button
+                                                type="button"
+                                                onClick={() => setUploadedAvatar(null)}
+                                                className="flex items-center gap-1 px-3 py-2.5 bg-gray-100 text-gray-600 rounded-xl font-bold hover:bg-gray-200 transition-all"
+                                            >
+                                                <X size={16} />
+                                                Cancel
+                                            </button>
+                                        )}
+                                    </div>
+                                    <p className="text-xs text-gray-400 mt-2">Max size: 2MB (JPG, PNG, GIF)</p>
+                                </div>
+                            </div>
+                            {/* Hidden input to keep URL as fallback - removed the visible URL input */}
                             <input 
                                 name="avatar"
-                                defaultValue={profile.avatar}
-                                className="w-full px-4 py-3 bg-gray-50 border border-gray-100 rounded-2xl outline-none focus:border-primary transition-all font-medium"
-                                placeholder="Paste image URL here"
-                                required 
+                                type="hidden"
+                                value={uploadedAvatar || profile.avatar}
                             />
                         </div>
                         <button type="submit" className="w-full py-4 bg-primary text-white rounded-2xl font-bold hover:bg-primary-dark transition-all shadow-lg active:scale-95">
