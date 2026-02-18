@@ -8,19 +8,26 @@ export default function SignIn() {
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [success, setSuccess] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const auth = useAuth()
   const nav = useNavigate()
+
+
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
     setError(null)
+    setSuccess(null)
     try {
       const userRole = await auth.signIn(email, password)
-      if (userRole === 'Admin') nav('/admin/dashboard')
-      else if (userRole === 'Facilitator') nav('/facilitator/dashboard')
-      else nav('/dashboard')
+      setSuccess('Login successful! Redirecting...')
+      setTimeout(() => {
+        if (userRole === 'Admin') nav('/admin/dashboard')
+        else if (userRole === 'Facilitator') nav('/facilitator/dashboard')
+        else nav('/dashboard')
+      }, 1000)
     } catch (err: any) {
       setError(err.message || 'Login failed')
     } finally {
@@ -33,6 +40,8 @@ export default function SignIn() {
     { id: 'Facilitator' as UserRole, label: 'Facilitator', icon: Briefcase },
     { id: 'Admin' as UserRole, label: 'Admin', icon: Shield },
   ]
+
+
 
   return (
     <div className="min-h-screen flex">
@@ -100,6 +109,12 @@ export default function SignIn() {
                 {error}
               </div>
             )}
+            {success && (
+              <div className="bg-green-50 text-green-600 p-4 rounded-xl text-sm font-bold border border-green-100 flex items-center gap-2">
+                <span className="w-1.5 h-1.5 bg-green-600 rounded-full" />
+                {success}
+              </div>
+            )}
 
             <div>
               <label className="block text-sm font-semibold text-gray-700 mb-2">Email</label>
@@ -138,7 +153,7 @@ export default function SignIn() {
                 <input type="checkbox" className="rounded text-primary focus:ring-primary" />
                 <span className="text-gray-600 font-medium">Remember me</span>
               </label>
-              <a href="#" className="text-primary font-semibold hover:underline">Forgot Password?</a>
+              <Link to="/forgot-password" className="text-primary font-semibold hover:underline">Forgot Password?</Link>
             </div>
 
             <button

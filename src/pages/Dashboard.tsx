@@ -24,12 +24,16 @@ export default function Dashboard() {
   
   // Load profile from localStorage if it exists
   const [profile, setProfile] = useState(() => {
-    const saved = localStorage.getItem('soma_profile');
-    if (saved) return JSON.parse(saved);
+    try {
+      const saved = localStorage.getItem('soma_profile');
+      if (saved) return JSON.parse(saved);
+    } catch (e) {
+      console.error('Failed to parse profile:', e);
+    }
     
     // Fallback to user email for name if no profile exists
     return {
-      name: user?.email.split('@')[0] || 'User',
+      name: user?.email?.split('@')[0] || 'User',
       avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=crop&q=80&w=150',
       grade: 'S2'
     };
@@ -38,8 +42,12 @@ export default function Dashboard() {
   useEffect(() => {
     // Listen for storage changes to update profile in real-time if changed in settings
     const handleStorageChange = () => {
-      const saved = localStorage.getItem('soma_profile');
-      if (saved) setProfile(JSON.parse(saved));
+      try {
+        const saved = localStorage.getItem('soma_profile');
+        if (saved) setProfile(JSON.parse(saved));
+      } catch (e) {
+        console.error('Failed to parse profile update:', e);
+      }
     };
     window.addEventListener('storage', handleStorageChange);
     return () => window.removeEventListener('storage', handleStorageChange);
@@ -47,8 +55,17 @@ export default function Dashboard() {
 
   // Load student progress from localStorage
   const [studentProgress, setStudentProgress] = useState<StudentProgress>(() => {
-    const saved = localStorage.getItem('soma_student_progress');
-    if (saved) return JSON.parse(saved);
+    try {
+      const saved = localStorage.getItem('soma_student_progress');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        // Ensure courses array exists
+        if (!parsed.courses) parsed.courses = [];
+        return parsed;
+      }
+    } catch (e) {
+      console.error('Failed to parse student progress:', e);
+    }
     return { email: user?.email || '', courses: [] };
   });
 
