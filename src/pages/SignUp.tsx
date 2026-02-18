@@ -12,20 +12,25 @@ export default function SignUp() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [success, setSuccess] = useState<string | null>(null)
   const auth = useAuth()
   const nav = useNavigate()
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError(null)
+    setSuccess(null)
     if (password !== confirmPassword) {
       setError("Passwords do not match")
       return
     }
     setLoading(true)
     try {
-      await auth.signUp(email, password)
-      nav('/dashboard')
+      const message = await auth.signUp(fullname, email, password)
+      // Show success message from API response
+      setSuccess( 'Account created successfully! Redirecting to login...')
+      // Navigate after delay to show message
+      setTimeout(() => nav('/signin'), 2000)
     } catch (err: any) {
       setError(err.message || 'Registration failed')
     } finally {
@@ -106,6 +111,12 @@ export default function SignUp() {
               <div className="bg-red-50 text-red-600 p-4 rounded-xl text-sm font-bold border border-red-100 flex items-center gap-2">
                 <span className="w-1.5 h-1.5 bg-red-600 rounded-full" />
                 {error}
+              </div>
+            )}
+            {success && (
+              <div className="bg-green-50 text-green-600 p-4 rounded-xl text-sm font-bold border border-green-100 flex items-center gap-2">
+                <span className="w-1.5 h-1.5 bg-green-600 rounded-full" />
+                {success}
               </div>
             )}
             <div>
