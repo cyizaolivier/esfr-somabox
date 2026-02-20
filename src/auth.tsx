@@ -3,7 +3,7 @@ import { signin, signup, registerUser, UserRole } from './api/auth.api'
 
 export type { UserRole }
 
-type User = { email: string; role: UserRole } | null
+type User = { id: string; email: string; role: UserRole } | null
 
 type StoredUser = { email: string; password: string; role: UserRole }
 
@@ -51,11 +51,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const signIn = async (email: string, password: string): Promise<UserRole> => {
     try {
       const response = await signin(email, password);
-      
+
       // Handle different API response structures
       let userData: { email: string; role?: string };
       let accessToken: string;
-      
+
       // Check if response has nested user object
       if (response.data.user) {
         userData = response.data.user;
@@ -67,7 +67,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
 
       console.log("Login response user:", userData)
-      
+
       // Normalize role from API (API returns "STUDENT", "FACILITATOR", "ADMIN" or lowercase)
       const rawRole = userData.role?.toUpperCase() || 'STUDENT';
       const roleMap: Record<string, UserRole> = {
@@ -77,30 +77,38 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       };
       const userRole = roleMap[rawRole] || 'Student';
       console.log("Mapped role:", userRole)
-      
-      const user = { email: userData.email, role: userRole };
-      
+
+      const user = {
+        id: (userData as any).id || (userData as any).studentId || (userData as any)._id || 'unknown',
+        email: userData.email,
+        role: userRole
+      };
+
       // Store auth data
       setUser(user);
       localStorage.setItem('soma_auth', JSON.stringify(user));
       localStorage.setItem('soma_token', accessToken);
-      
+
       return userRole;
     } catch (error) {
       // Fallback: Try localStorage if API fails (for local demo accounts)
       console.log('API failed, checking localStorage...');
       const users = getUsers();
       const foundUser = users.find(u => u.email.toLowerCase() === email.toLowerCase());
-      
+
       if (foundUser && foundUser.password === password) {
         console.log('Found user in localStorage:', foundUser);
-        const userData = { email: foundUser.email, role: foundUser.role };
+        const userData = {
+          id: (foundUser as any).id || (foundUser as any).studentId || 'local_user',
+          email: foundUser.email,
+          role: foundUser.role
+        };
         setUser(userData);
         localStorage.setItem('soma_auth', JSON.stringify(userData));
         localStorage.setItem('soma_token', 'local_token');
         return foundUser.role;
       }
-      
+
       console.error('Sign in failed:', error);
       throw new Error('Invalid email or password');
     }
@@ -133,7 +141,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const existingUsers = getUsers();
       const newUser = { email, password, role };
       saveUsers([...existingUsers, newUser]);
-      
+
       // Return success message from API if available
       if (response.data?.message) {
         return response.data.message;
@@ -151,35 +159,35 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const forgotPassword = async (email: string): Promise<{ success: boolean; message: string; newPassword?: string }> => {
     await new Promise((r) => setTimeout(r, 600))
-    
+
     const users = getUsers();
     const foundUser = users.find(u => u.email === email);
-    
+
     if (!foundUser) {
       // Return success even if user not found for security reasons
       return { success: true, message: 'If an account with that email exists, a new password has been sent.' };
     }
-    
+
     // Generate a new random password
     const newPassword = Math.random().toString(36).slice(-8) + Math.random().toString(36).slice(-8).toUpperCase();
-    
+
     // Update user password
-    const updatedUsers = users.map(u => 
+    const updatedUsers = users.map(u =>
       u.email === email ? { ...u, password: newPassword } : u
     );
     saveUsers(updatedUsers);
-    
+
     // Store the new password temporarily in localStorage for demo purposes
     // In production, this would send an email
-    localStorage.setItem('soma_reset_' + email, JSON.stringify({ 
-      newPassword, 
+    localStorage.setItem('soma_reset_' + email, JSON.stringify({
+      newPassword,
       expires: Date.now() + 3600000 // 1 hour
     }));
-    
-    return { 
-      success: true, 
+
+    return {
+      success: true,
       message: 'New password generated! For demo purposes, the new password is: ' + newPassword + ' (In production, this would be sent to your email)',
-      newPassword 
+      newPassword
     };
   }
 

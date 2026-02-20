@@ -8,7 +8,16 @@ import { AdminDashboard } from './pages/AdminDashboard'
 import { EnrollmentDashboard } from './pages/EnrollmentDashboard'
 import { FacilitatorDashboard } from './pages/FacilitatorDashboard'
 import { Library, Programs, Messages, Settings } from './pages/SubPages'
+import StudyCourse from './pages/StudyCourse'
 import { AuthProvider, useAuth, UserRole } from './auth'
+
+// Editor Imports
+import { CourseProvider } from './editor/src/state/CourseContext'
+import { EditorProvider } from './editor/src/state/EditorContext'
+import { MetadataForm } from './editor/src/components/course/MetadataForm'
+import { CourseOutline } from './editor/src/components/course/CourseOutline'
+import { EditorLayout } from './editor/src/components/editor/EditorLayout'
+import { CourseRendererWrapper } from './editor/src/components/renderer/CourseRendererWrapper'
 
 function PrivateRoute({ children }: { children: JSX.Element }) {
   const { user } = useAuth()
@@ -31,110 +40,164 @@ function RoleRoute({ children, allowedRoles }: { children: JSX.Element, allowedR
 export default function App() {
   return (
     <AuthProvider>
-      <Routes>
-        <Route path="/signin" element={<SignIn />} />
-        <Route path="/forgot-password" element={<ForgotPassword />} />
-        <Route path="/signup" element={<SignUp />} />
+      <CourseProvider>
+        <EditorProvider>
+          <Routes>
+            <Route path="/signin" element={<SignIn />} />
+            <Route path="/forgot-password" element={<ForgotPassword />} />
+            <Route path="/signup" element={<SignUp />} />
 
-        {/* Student Routes */}
-        <Route
-          path="/dashboard"
-          element={
-            <RoleRoute allowedRoles={['Student']}>
-              <Dashboard />
-            </RoleRoute>
-          }
-        />
-        <Route
-          path="/library"
-          element={
-            <RoleRoute allowedRoles={['Student']}>
-              <Library />
-            </RoleRoute>
-          }
-        />
-        <Route
-          path="/programs"
-          element={
-            <RoleRoute allowedRoles={['Student']}>
-              <Programs />
-            </RoleRoute>
-          }
-        />
-        <Route
-          path="/messages"
-          element={
-            <RoleRoute allowedRoles={['Student']}>
-              <Messages />
-            </RoleRoute>
-          }
-        />
+            {/* Student Routes */}
+            <Route
+              path="/dashboard"
+              element={
+                <RoleRoute allowedRoles={['Student']}>
+                  <Dashboard />
+                </RoleRoute>
+              }
+            />
+            <Route
+              path="/library"
+              element={
+                <RoleRoute allowedRoles={['Student']}>
+                  <Library />
+                </RoleRoute>
+              }
+            />
+            <Route
+              path="/study/:courseId"
+              element={
+                <RoleRoute allowedRoles={['Student']}>
+                  <StudyCourse />
+                </RoleRoute>
+              }
+            />
+            <Route
+              path="/programs"
+              element={
+                <RoleRoute allowedRoles={['Student']}>
+                  <Programs />
+                </RoleRoute>
+              }
+            />
+            <Route
+              path="/messages"
+              element={
+                <RoleRoute allowedRoles={['Student']}>
+                  <Messages />
+                </RoleRoute>
+              }
+            />
 
-        {/* Facilitator Routes */}
-        <Route
-          path="/facilitator/dashboard"
-          element={
-            <RoleRoute allowedRoles={['Facilitator']}>
-              <FacilitatorDashboard />
-            </RoleRoute>
-          }
-        />
-        <Route
-          path="/facilitator/courses"
-          element={
-            <RoleRoute allowedRoles={['Facilitator']}>
-              <FacilitatorDashboard />
-            </RoleRoute>
-          }
-        />
+            {/* Facilitator Routes */}
+            <Route
+              path="/facilitator/dashboard"
+              element={
+                <RoleRoute allowedRoles={['Facilitator']}>
+                  <FacilitatorDashboard />
+                </RoleRoute>
+              }
+            />
+            <Route
+              path="/facilitator/courses"
+              element={
+                <RoleRoute allowedRoles={['Facilitator']}>
+                  <FacilitatorDashboard />
+                </RoleRoute>
+              }
+            />
 
-        {/* Admin Routes */}
-        <Route
-          path="/admin/enrollment"
-          element={
-            <RoleRoute allowedRoles={['Admin']}>
-              <EnrollmentDashboard />
-            </RoleRoute>
-          }
-        />
-        <Route
-          path="/admin/dashboard"
-          element={
-            <RoleRoute allowedRoles={['Admin']}>
-              <AdminDashboard />
-            </RoleRoute>
-          }
-        />
-        <Route
-          path="/admin/add-facilitator"
-          element={
-            <RoleRoute allowedRoles={['Admin']}>
-              <AdminDashboard />
-            </RoleRoute>
-          }
-        />
-        <Route
-          path="/admin/add-admin"
-          element={
-            <RoleRoute allowedRoles={['Admin']}>
-              <AdminDashboard />
-            </RoleRoute>
-          }
-        />
+            {/* Editor Routes */}
+            <Route
+              path="/facilitator/create-course"
+              element={
+                <RoleRoute allowedRoles={['Facilitator']}>
+                  <MetadataForm />
+                </RoleRoute>
+              }
+            />
+            <Route
+              path="/facilitator/course-outline"
+              element={
+                <RoleRoute allowedRoles={['Facilitator']}>
+                  <CourseOutline />
+                </RoleRoute>
+              }
+            />
+            <Route
+              path="/facilitator/editor/:topicId"
+              element={
+                <RoleRoute allowedRoles={['Facilitator']}>
+                  <EditorLayout />
+                </RoleRoute>
+              }
+            />
+            <Route
+              path="/facilitator/preview/:topicId"
+              element={
+                <RoleRoute allowedRoles={['Facilitator', 'Student', 'Admin']}>
+                  <CourseRendererWrapper />
+                </RoleRoute>
+              }
+            />
+            <Route
+              path="/facilitator/preview"
+              element={
+                <RoleRoute allowedRoles={['Facilitator', 'Student', 'Admin']}>
+                  <CourseRendererWrapper />
+                </RoleRoute>
+              }
+            />
 
-        {/* Shared Routes */}
-        <Route
-          path="/settings"
-          element={
-            <PrivateRoute>
-              <Settings />
-            </PrivateRoute>
-          }
-        />
+            {/* Admin Routes */}
+            <Route
+              path="/admin/enrollment"
+              element={
+                <RoleRoute allowedRoles={['Admin']}>
+                  <EnrollmentDashboard />
+                </RoleRoute>
+              }
+            />
+            <Route
+              path="/admin/dashboard"
+              element={
+                <RoleRoute allowedRoles={['Admin']}>
+                  <AdminDashboard />
+                </RoleRoute>
+              }
+            />
+            <Route
+              path="/admin/add-facilitator"
+              element={
+                <RoleRoute allowedRoles={['Admin']}>
+                  <AdminDashboard />
+                </RoleRoute>
+              }
+            />
+            <Route
+              path="/admin/add-admin"
+              element={
+                <RoleRoute allowedRoles={['Admin']}>
+                  <AdminDashboard />
+                </RoleRoute>
+              }
+            />
 
-        <Route path="/" element={<Navigate to="/dashboard" replace />} />
-        <Route path="*" element={<Navigate to="/dashboard" replace />} />
-      </Routes>
+            {/* Shared Routes */}
+            <Route
+              path="/settings"
+              element={
+                <PrivateRoute>
+                  <Settings />
+                </PrivateRoute>
+              }
+            />
+
+            <Route path="/" element={<Navigate to="/dashboard" replace />} />
+            <Route path="*" element={<Navigate to="/dashboard" replace />} />
+          </Routes>
+        </EditorProvider>
+      </CourseProvider>
     </AuthProvider>
   )
 }

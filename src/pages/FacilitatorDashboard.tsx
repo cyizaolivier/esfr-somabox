@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { useLocation } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
 import DashboardLayout from '../components/DashboardLayout'
 import { useAuth } from '../auth'
 import { BookOpen, Users, TrendingUp, Clock, PlayCircle, Plus, MessageSquare, Send, FileCheck, MessageCircle, Star } from 'lucide-react'
@@ -26,6 +26,7 @@ interface Reply {
 export const FacilitatorDashboard = () => {
   const { user } = useAuth()
   const location = useLocation()
+  const navigate = useNavigate()
   const isCoursesView = location.pathname === '/facilitator/courses'
   const [view, setView] = useState<'stats' | 'studentList' | 'messages' | 'comments'>('stats')
 
@@ -54,7 +55,7 @@ export const FacilitatorDashboard = () => {
   }, [comments]);
 
   const stats = [
-    { label: 'Total Courses', value: '0', icon: BookOpen, color: 'bg-blue-50 text-blue-600' },
+    { label: 'Total Courses', value: '0', icon: BookOpen, color: 'bg-primary-surface text-primary' },
     { label: 'Total Students', value: studentCount.toLocaleString(), icon: Users, color: 'bg-green-50 text-green-600' },
     { label: 'Active Enrollments', value: '0', icon: TrendingUp, color: 'bg-purple-50 text-purple-600' },
     { label: 'Completion Rate', value: '0%', icon: FileCheck, color: 'bg-orange-50 text-orange-600' },
@@ -63,7 +64,7 @@ export const FacilitatorDashboard = () => {
   const myCourses = [
     { id: 'c1', title: 'Advanced React Patterns', students: '240', progress: 85, image: 'https://images.unsplash.com/photo-1633356122544-f134324a6cee?auto=format&fit=crop&q=80&w=400' },
     { id: 'c2', title: 'Fullstack Architecture', students: '180', progress: 70, image: 'https://images.unsplash.com/photo-1498050108023-c5249f4df085?auto=format&fit=crop&q=80&w=400' },
-    { id: 'c3', title: 'UI/UX Design Systems', students: '320', progress: 95, image: 'https://images.unsplash.com/photo-1541462608141-ad43bddee296?auto=format&fit=crop&q=80&w=400' },
+    { id: 'c3', title: 'UI/UX Design Systems', students: '320', progress: 95, image: 'https://images.unsplash.com/photo-1586717791821-3f44a563fa4c?w=600&auto=format&fit=crop&q=60&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8M3x8VUklMkZVWCUyMERlc2lnbnxlbnwwfHwwfHx8MA%3D%3D' },
   ]
 
   const recentMessages = [
@@ -81,14 +82,14 @@ export const FacilitatorDashboard = () => {
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <h2 className="text-2xl font-bold text-gray-900">Enrolled Students ({students.length})</h2>
-          <button 
+          <button
             onClick={() => setView('stats')}
             className="text-primary font-bold text-sm hover:underline"
           >
             Back to Overview
           </button>
         </div>
-        
+
         <div className="bg-white/40 backdrop-blur-md border border-primary/10 rounded-[2rem] overflow-hidden">
           <table className="w-full text-left border-collapse">
             <thead>
@@ -125,18 +126,18 @@ export const FacilitatorDashboard = () => {
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <h2 className="text-2xl font-bold text-gray-900">Recent Messages</h2>
-          <button 
+          <button
             onClick={() => setView('stats')}
             className="text-primary font-bold text-sm hover:underline"
           >
             Back to Overview
           </button>
         </div>
-        
+
         <div className="bg-white/40 backdrop-blur-md border border-primary/10 rounded-[2rem] overflow-hidden">
           <div className="divide-y divide-primary/5">
             {recentMessages.length > 0 ? recentMessages.map((msg) => (
-              <div key={msg.id} className={`p-6 hover:bg-primary/5 transition-colors cursor-pointer ${msg.unread ? 'bg-blue-50/30' : ''}`}>
+              <div key={msg.id} className={`p-6 hover:bg-primary/5 transition-colors cursor-pointer ${msg.unread ? 'bg-primary-surface/30' : ''}`}>
                 <div className="flex items-start gap-4">
                   <div className="w-10 h-10 bg-primary rounded-full flex items-center justify-center text-white font-bold flex-shrink-0">
                     {msg.sender.charAt(0)}
@@ -150,7 +151,7 @@ export const FacilitatorDashboard = () => {
                     <p className="text-sm text-gray-400 truncate mt-1">{msg.preview}</p>
                   </div>
                   {msg.unread && (
-                    <span className="w-2 h-2 bg-blue-500 rounded-full flex-shrink-0 mt-2"></span>
+                    <span className="w-2 h-2 bg-primary-light rounded-full flex-shrink-0 mt-2"></span>
                   )}
                 </div>
               </div>
@@ -177,8 +178,8 @@ export const FacilitatorDashboard = () => {
         timestamp: new Date().toLocaleString()
       };
 
-      setComments(prev => prev.map(c => 
-        c.id === commentId 
+      setComments(prev => prev.map(c =>
+        c.id === commentId
           ? { ...c, replies: [...c.replies, reply] }
           : c
       ));
@@ -191,7 +192,7 @@ export const FacilitatorDashboard = () => {
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <h2 className="text-2xl font-bold text-gray-900">Course Comments</h2>
-          <button 
+          <button
             onClick={() => { setView('stats'); setSelectedCourseId(null); }}
             className="text-primary font-bold text-sm hover:underline"
           >
@@ -207,11 +208,10 @@ export const FacilitatorDashboard = () => {
               <button
                 key={course.id}
                 onClick={() => setSelectedCourseId(course.id)}
-                className={`p-4 rounded-xl border transition-all ${
-                  selectedCourseId === course.id
-                    ? 'bg-primary text-white border-primary'
-                    : 'bg-white/40 border-primary/10 hover:border-primary/30'
-                }`}
+                className={`p-4 rounded-xl border transition-all ${selectedCourseId === course.id
+                  ? 'bg-primary text-white border-primary'
+                  : 'bg-white/40 border-primary/10 hover:border-primary/30'
+                  }`}
               >
                 <p className="font-bold text-sm truncate">{course.title}</p>
                 <p className={`text-xs mt-1 ${selectedCourseId === course.id ? 'text-white/70' : 'text-gray-500'}`}>
@@ -309,10 +309,10 @@ export const FacilitatorDashboard = () => {
         {!isCoursesView && view === 'stats' && (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6">
             {stats.map((stat, i) => (
-              <div 
-                key={i} 
-                onClick={() => { 
-                  if (stat.label === 'Total Students') setView('studentList'); 
+              <div
+                key={i}
+                onClick={() => {
+                  if (stat.label === 'Total Students') setView('studentList');
                   if (stat.label === 'Active Enrollments') setView('studentList');
                 }}
                 className={`p-6 bg-white/40 backdrop-blur-md border border-primary/10 rounded-[2rem] shadow-sm hover:shadow-md transition-all ${['Total Students', 'Active Enrollments'].includes(stat.label) ? 'cursor-pointer group' : ''}`}
@@ -326,7 +326,7 @@ export const FacilitatorDashboard = () => {
             ))}
 
             {/* Comments Card */}
-            <div 
+            <div
               onClick={() => setView('comments')}
               className="p-6 bg-white/40 backdrop-blur-md border border-primary/10 rounded-[2rem] shadow-sm hover:shadow-md transition-all cursor-pointer group"
             >
@@ -345,18 +345,18 @@ export const FacilitatorDashboard = () => {
             <div className="space-y-6">
               <div className="flex items-center justify-between">
                 <h2 className="text-xl font-bold text-gray-900">Recent Messages</h2>
-                <button 
+                <button
                   onClick={() => setView('messages')}
                   className="text-primary font-bold text-sm hover:underline"
                 >
                   View all
                 </button>
               </div>
-              
+
               <div className="bg-white/40 backdrop-blur-md border border-primary/10 rounded-[2rem] overflow-hidden">
                 <div className="divide-y divide-primary/5">
                   {recentMessages.slice(0, 3).map((msg) => (
-                    <div key={msg.id} className={`p-4 hover:bg-primary/5 transition-colors cursor-pointer ${msg.unread ? 'bg-blue-50/30' : ''}`}>
+                    <div key={msg.id} className={`p-4 hover:bg-primary/5 transition-colors cursor-pointer ${msg.unread ? 'bg-primary-surface/30' : ''}`}>
                       <div className="flex items-start gap-3">
                         <div className="w-8 h-8 bg-primary rounded-full flex items-center justify-center text-white font-bold text-xs flex-shrink-0">
                           {msg.sender.charAt(0)}
@@ -369,7 +369,7 @@ export const FacilitatorDashboard = () => {
                           <p className={`text-xs ${msg.unread ? 'font-medium text-gray-900' : 'text-gray-600'} mt-0.5 truncate`}>{msg.subject}</p>
                         </div>
                         {msg.unread && (
-                          <span className="w-2 h-2 bg-blue-500 rounded-full flex-shrink-0 mt-1"></span>
+                          <span className="w-2 h-2 bg-primary-light rounded-full flex-shrink-0 mt-1"></span>
                         )}
                       </div>
                     </div>
@@ -383,7 +383,7 @@ export const FacilitatorDashboard = () => {
               <div className="flex items-center justify-between">
                 <h2 className="text-xl font-bold text-gray-900">Quick Overview</h2>
               </div>
-              
+
               <div className="bg-white/40 backdrop-blur-md border border-primary/10 rounded-[2rem] p-6 space-y-6">
                 <div className="space-y-3">
                   <div className="flex items-center justify-between text-sm">
@@ -394,7 +394,7 @@ export const FacilitatorDashboard = () => {
                     <div className="h-full bg-primary rounded-full" style={{ width: '75%' }}></div>
                   </div>
                 </div>
-                
+
                 <div className="space-y-3">
                   <div className="flex items-center justify-between text-sm">
                     <span className="font-medium text-gray-700">Active Students This Week</span>
@@ -404,7 +404,7 @@ export const FacilitatorDashboard = () => {
                     <div className="h-full bg-green-500 rounded-full" style={{ width: '60%' }}></div>
                   </div>
                 </div>
-                
+
                 <div className="space-y-3">
                   <div className="flex items-center justify-between text-sm">
                     <span className="font-medium text-gray-700">Pending Quiz Reviews</span>
@@ -429,11 +429,22 @@ export const FacilitatorDashboard = () => {
             <h2 className="text-2xl font-bold text-gray-900">
               {isCoursesView ? "All Created Courses" : "Manage Recent Courses"}
             </h2>
-            {!isCoursesView && (
-              <button className="text-primary font-bold text-sm hover:underline">View all courses</button>
-            )}
+            <div className="flex items-center gap-4">
+              {isCoursesView && (
+                <button
+                  onClick={() => navigate('/facilitator/create-course')}
+                  className="flex items-center gap-2 bg-primary text-white px-4 py-2 rounded-xl font-bold hover:bg-primary-dark transition-all shadow-md active:scale-95"
+                >
+                  <Plus size={18} />
+                  <span>Create New Course</span>
+                </button>
+              )}
+              {!isCoursesView && (
+                <button className="text-primary font-bold text-sm hover:underline">View all courses</button>
+              )}
+            </div>
           </div>
-          
+
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
             {myCourses.map((course) => (
               <div key={course.id} className="group cursor-pointer">

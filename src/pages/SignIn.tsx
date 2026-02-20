@@ -48,7 +48,7 @@ export default function SignIn() {
       {/* Left Column - Image & Branding */}
       <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden bg-primary">
         <img 
-          src="https://images.unsplash.com/photo-1522202176988-66273c2fd55f?auto=format&fit=crop&q=80&w=1000" 
+          src="https://images.unsplash.com/photo-1531545514256-b1400bc00f31?w=600&auto=format&fit=crop&q=60&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8MTF8fHN0dWRlbnRzJTIwaW4lMjBjbGFzc3xlbnwwfHwwfHx8MA%3D%3D" 
           alt="Students studying"
           className="absolute inset-0 w-full h-full object-cover opacity-100 mix-blend-overlay"
         />
@@ -99,7 +99,7 @@ export default function SignIn() {
         <div className="max-w-md w-full py-12">
           <div className="mb-10 text-center lg:text-left">
             <h2 className="text-4xl font-bold text-gray-900 mb-2">Sign In</h2>
-            <p className="text-gray-500">Choose your role and sign in</p>
+            <p className="text-gray-500">Sign in to continue your journey and discover what awaits you</p>
           </div>
 
           <form onSubmit={submit} className="space-y-6">

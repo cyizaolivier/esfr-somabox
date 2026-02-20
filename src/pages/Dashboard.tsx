@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../auth'
 import Sidebar from '../components/Sidebar'
 import { Bell, CheckSquare, MoreHorizontal, ClipboardList, Menu, Activity } from 'lucide-react'
-
+import { getStudentProgress } from '../api/progress.api'
 interface CourseProgress {
   courseId: string;
   courseName: string;
@@ -15,13 +15,15 @@ interface CourseProgress {
 interface StudentProgress {
   email: string;
   courses: CourseProgress[];
+  loading: boolean;
+  error: string | null;
 }
 
 export default function Dashboard() {
   const { user } = useAuth()
   const navigate = useNavigate()
   const [isSidebarOpen, setIsSidebarOpen] = useState(false)
-  
+  // const [studentProgress, setStudentProgress] = useState<StudentProgress>([]);
   // Load profile from localStorage if it exists
   const [profile, setProfile] = useState(() => {
     try {
@@ -30,7 +32,7 @@ export default function Dashboard() {
     } catch (e) {
       console.error('Failed to parse profile:', e);
     }
-    
+
     // Fallback to user email for name if no profile exists
     return {
       name: user?.email?.split('@')[0] || 'User',
@@ -53,28 +55,57 @@ export default function Dashboard() {
     return () => window.removeEventListener('storage', handleStorageChange);
   }, []);
 
-  // Load student progress from localStorage
-  const [studentProgress, setStudentProgress] = useState<StudentProgress>(() => {
-    try {
-      const saved = localStorage.getItem('soma_student_progress');
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        // Ensure courses array exists
-        if (!parsed.courses) parsed.courses = [];
-        return parsed;
-      }
-    } catch (e) {
-      console.error('Failed to parse student progress:', e);
-    }
-    return { email: user?.email || '', courses: [] };
+  // Student progress state
+  const [studentProgress, setStudentProgress] = useState<StudentProgress>({
+    email: user?.email || '',
+    courses: [],
+    loading: true,
+    error: null
   });
+
+  useEffect(() => {
+    const fetchProgress = async () => {
+      try {
+        const studentId = user?.id;
+        if (!studentId) {
+          throw new Error('No student ID found');
+        }
+        const response = await getStudentProgress(studentId);
+        const courses: CourseProgress[] = response.data.map((item: any) => ({
+          courseId: item.courseId,
+          courseName: `Course ${item.courseId.substring(0, 4)}`,
+          progress: item.progress_percentage,
+          status: item.status as 'completed' | 'in-progress' | 'pending',
+          lastUpdated: new Date().toISOString()
+        }));
+
+        setStudentProgress(prev => ({
+          ...prev,
+          courses,
+          loading: false,
+          error: null
+        }));
+      } catch (err: any) {
+        console.error('Failed to fetch progress:', err);
+        setStudentProgress(prev => ({
+          ...prev,
+          loading: false,
+          error: 'Failed to load progress data'
+        }));
+      }
+    };
+
+    if (user) {
+      fetchProgress();
+    }
+  }, [user]);
 
   // Calculate real statistics
   const completedCount = studentProgress.courses.filter(c => c.status === 'completed').length;
   const pendingCount = studentProgress.courses.filter(c => c.status === 'pending').length;
   const inProgressCount = studentProgress.courses.filter(c => c.status === 'in-progress').length;
   const totalCourses = studentProgress.courses.length;
-  const overallProgress = totalCourses > 0 
+  const overallProgress = totalCourses > 0
     ? Math.round(studentProgress.courses.reduce((sum, c) => sum + c.progress, 0) / totalCourses)
     : 0;
 
@@ -110,11 +141,11 @@ export default function Dashboard() {
   return (
     <div className="flex min-h-screen bg-primary-surface">
       <Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} />
-      
+
       <main className="flex-1 overflow-y-auto max-h-screen w-full flex flex-col">
         <header className="flex items-center justify-between px-4 md:px-8 py-4 bg-primary text-white shadow-lg relative z-20">
           <div className="flex items-center gap-4">
-            <button 
+            <button
               onClick={() => setIsSidebarOpen(true)}
               className="lg:hidden p-2 text-white/80 hover:bg-white/10 rounded-xl transition-colors"
             >
@@ -122,16 +153,16 @@ export default function Dashboard() {
             </button>
             <h1 className="text-xl md:text-2xl font-black text-white truncate px-2">Dashboard</h1>
           </div>
-          
+
           <div className="flex items-center gap-3 md:gap-6">
             <button className="relative p-2 text-white/70 hover:text-white transition-colors">
               <Bell size={24} />
             </button>
 
             <div className="flex items-center gap-2 md:gap-3 pl-2 md:pl-6 border-l border-white/20 lg:border-none">
-              <img 
-                src={profile.avatar} 
-                alt="Profile" 
+              <img
+                src={profile.avatar}
+                alt="Profile"
                 className="w-8 h-8 md:w-11 md:h-11 rounded-full object-cover border-2 border-white/30 shadow-sm cursor-pointer"
                 onClick={() => navigate('/settings')}
               />
@@ -210,7 +241,7 @@ export default function Dashboard() {
               <div className="bg-white/30 backdrop-blur-xl rounded-[2rem] md:rounded-[3rem] p-6 md:p-10 border border-primary/10 shadow-sm">
                 <div className="flex items-center justify-between mb-6 md:mb-8">
                   <h2 className="text-xl md:text-2xl font-bold text-gray-800">My Programs</h2>
-                  <button 
+                  <button
                     onClick={() => {
                       const grade = profile.grade || 'S2';
                       let initialPath = ['rwandan', 'secondary', grade];
@@ -258,7 +289,7 @@ export default function Dashboard() {
               <div className="bg-white/30 backdrop-blur-xl rounded-[2rem] md:rounded-[3rem] p-6 md:p-8 border border-primary/10 shadow-sm">
                 <div className="flex items-center justify-between mb-6">
                   <h2 className="text-lg md:text-xl font-bold text-gray-800">Messages</h2>
-                  <button 
+                  <button
                     onClick={() => navigate('/messages')}
                     className="text-primary text-xs font-bold hover:underline"
                   >
@@ -267,8 +298,8 @@ export default function Dashboard() {
                 </div>
                 <div className="space-y-3">
                   {chats.map(chat => (
-                    <div 
-                      key={chat.id} 
+                    <div
+                      key={chat.id}
                       onClick={() => navigate('/messages')}
                       className="flex items-center gap-3 p-3 rounded-2xl hover:bg-white/40 transition-all cursor-pointer border border-transparent hover:border-primary/10 group"
                     >

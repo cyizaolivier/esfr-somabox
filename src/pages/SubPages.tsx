@@ -4,6 +4,7 @@ import Sidebar from '../components/Sidebar'
 import DashboardLayout from '../components/DashboardLayout'
 import { Book, Bookmark, Folder, Search, User, Shield, Bell, HardDrive, PlayCircle, ChevronRight, ArrowLeft, Mail, Download, MoreHorizontal, Paperclip, Send, Menu, MessageSquare, Trash2, CheckSquare, Upload, X } from 'lucide-react'
 import { useAuth } from '../auth'
+import { getAllCourses } from '../api/course.api'
 import rwandanProgramImg from '../assets/Rwandan program.jpg'
 import internationalProgramImg from '../assets/international program.jpg'
 import otherSchoolContentsImg from '../assets/other school contents.jpg'
@@ -14,42 +15,97 @@ import universityStudentsImg from '../assets/University students.jpg'
 
 const Layout = DashboardLayout;
 
-export const Library = () => (
-    <Layout title="Library">
-        <div className="relative mb-8 md:mb-10 -mt-2">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
-            <input 
-                placeholder="Search" 
-                className="w-full max-w-xl pl-11 pr-4 py-2.5 md:py-3 bg-primary-surface/60 border border-primary/5 rounded-2xl text-sm outline-none focus:bg-white focus:border-primary/20 transition-all font-medium" 
-            />
-        </div>
+export const Library = () => {
+    const navigate = useNavigate();
+    const [courses, setCourses] = React.useState<any[]>([]);
+    const [loading, setLoading] = React.useState(true);
+    const [error, setError] = React.useState<string | null>(null);
 
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-x-8 md:gap-y-10">
-            {[ 
-                { name: 'Chemistry', img: 'https://images.unsplash.com/photo-1636466497217-26a8cbeaf0aa?auto=format&fit=crop&q=80&w=400' },
-                { name: 'Chemistry', img: 'https://images.unsplash.com/photo-1603126857599-f6e157fa2fe6?auto=format&fit=crop&q=80&w=400' },
-                { name: 'Physics', img: 'https://images.unsplash.com/photo-1636466497217-26a8cbeaf0aa?auto=format&fit=crop&q=80&w=400' },
-                { name: 'Physics', img: 'https://images.unsplash.com/photo-1635070041078-e363dbe005cb?auto=format&fit=crop&q=80&w=400' },
-                { name: 'Math', img: 'https://images.unsplash.com/photo-1456513080510-7bf3a84b82f8?auto=format&fit=crop&q=80&w=400' },
-                { name: 'Chemistry', img: 'https://images.unsplash.com/photo-1603126857599-f6e157fa2fe6?auto=format&fit=crop&q=80&w=400' },
-                { name: 'English', img: 'https://images.unsplash.com/photo-1636466497217-26a8cbeaf0aa?auto=format&fit=crop&q=80&w=400' },
-                { name: 'English', img: 'https://images.unsplash.com/photo-1456513080510-7bf3a84b82f8?auto=format&fit=crop&q=80&w=400' }
-            ].map((book, i) => (
-                <div key={i} className="flex flex-col gap-3 group">
-                    <div className="aspect-[3/4] rounded-2xl md:rounded-[1.5rem] overflow-hidden border border-gray-100 shadow-sm group-hover:shadow-lg transition-all duration-300">
-                        <img src={book.img} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" alt={book.name} />
-                    </div>
-                    <div className="flex items-center justify-between px-1">
-                        <span className="text-xs md:text-sm font-bold text-gray-700 truncate mr-2">{book.name}</span>
-                        <button className="text-primary hover:scale-110 transition-transform flex-shrink-0">
-                            <Download size={18} />
-                        </button>
-                    </div>
+    React.useEffect(() => {
+        const fetchCourses = async () => {
+            try {
+                const response = await getAllCourses();
+                // Assuming response.data is the array based on user's hint
+                setCourses(response.data);
+            } catch (err) {
+                setError('Failed to load courses');
+                console.error('Error fetching courses:', err);
+            } finally {
+                setLoading(false);
+            }
+        };
+        fetchCourses();
+    }, []);
+
+    return (
+        <Layout title="Library">
+            <div className="relative mb-8 md:mb-10 -mt-2">
+                <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+                <input
+                    placeholder="Search"
+                    className="w-full max-w-xl pl-11 pr-4 py-2.5 md:py-3 bg-primary-surface/60 border border-primary/5 rounded-2xl text-sm outline-none focus:bg-white focus:border-primary/20 transition-all font-medium"
+                />
+            </div>
+
+            {loading ? (
+                <div className="flex flex-col items-center justify-center py-20 gap-4">
+                    <div className="w-12 h-12 border-4 border-primary/20 border-t-primary rounded-full animate-spin"></div>
+                    <p className="text-gray-400 font-medium animate-pulse">Loading your library...</p>
                 </div>
-            ))}
-        </div>
-    </Layout>
-)
+            ) : error ? (
+                <div className="bg-red-50 text-red-600 p-8 rounded-[2rem] border border-red-100 text-center max-w-lg mx-auto">
+                    <X size={40} className="mx-auto mb-4 opacity-50" />
+                    <h3 className="text-lg font-bold mb-2">Oops! Something went wrong</h3>
+                    <p className="text-sm opacity-80">{error}</p>
+                    <button
+                        onClick={() => window.location.reload()}
+                        className="mt-6 px-6 py-2 bg-red-600 text-white rounded-xl text-sm font-bold hover:bg-red-700 transition-all"
+                    >
+                        Retry
+                    </button>
+                </div>
+            ) : courses.length === 0 ? (
+                <div className="text-center py-20">
+                    <div className="w-20 h-20 bg-gray-50 rounded-full flex items-center justify-center text-gray-300 mx-auto mb-6">
+                        <Book size={40} />
+                    </div>
+                    <h3 className="text-xl font-bold text-gray-900 mb-2">No Courses Found</h3>
+                    <p className="text-gray-500 max-w-sm mx-auto">Start by creating your first course to see it here in the library.</p>
+                </div>
+            ) : (
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-x-8 md:gap-y-10">
+                    {courses.map((course, i) => (
+                        <div
+                            key={course.id || i}
+                            onClick={() => navigate(`/study/${course.id}`)}
+                            className="flex flex-col gap-3 group cursor-pointer"
+                        >
+                            <div className="aspect-[3/4] rounded-2xl md:rounded-[1.5rem] overflow-hidden border border-gray-100 shadow-sm group-hover:shadow-lg transition-all duration-300 relative">
+                                <img
+                                    src={course.coverPage || 'https://images.unsplash.com/photo-1636466497217-26a8cbeaf0aa?auto=format&fit=crop&q=80&w=400'}
+                                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                                    alt={course.title}
+                                />
+                                <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-4">
+                                    <span className="text-[10px] text-white/80 font-bold uppercase tracking-widest">{course.level || 'General'}</span>
+                                </div>
+                            </div>
+                            <div className="flex items-center justify-between px-1">
+                                <div className="flex flex-col min-w-0">
+                                    <span className="text-xs md:text-sm font-bold text-gray-700 truncate group-hover:text-primary transition-colors">{course.title}</span>
+                                    <span className="text-[10px] text-gray-400 font-medium truncate">By {course.author || 'Anonymous'}</span>
+                                </div>
+                                <button className="text-primary hover:scale-110 transition-transform flex-shrink-0 bg-primary-surface/40 p-1.5 rounded-lg">
+                                    <Download size={16} />
+                                </button>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            )}
+        </Layout>
+    );
+};
 export const Programs = () => {
     const location = useLocation();
     const [path, setPath] = React.useState<string[]>([]); // Navigation stack
@@ -63,9 +119,9 @@ export const Programs = () => {
     }, [location.state]);
 
     const mainPrograms = [
-        { 
+        {
             id: 'rwandan',
-            title: 'Rwandan Program', 
+            title: 'Rwandan Program',
             desc: 'National curriculum following the Rwanda Education Board (REB) standards.',
             levels: [
                 { id: 'nursery', name: 'Nursery', span: 'Ages 3-6', grades: [], img: nurseryStudentsImg },
@@ -73,25 +129,25 @@ export const Programs = () => {
                 { id: 'secondary', name: 'Secondary', span: 'S1 - S6', grades: ['S1', 'S2', 'S3', 'S4', 'S5', 'S6'], img: secondaryStudentsImg },
                 { id: 'university', name: 'University', span: 'Higher Ed', grades: ['Year 1', 'Year 2', 'Year 3', 'Year 4'], img: universityStudentsImg }
             ],
-            lessons: 156, 
+            lessons: 156,
             img: rwandanProgramImg,
             color: 'from-blue-600 to-blue-400'
         },
-        { 
+        {
             id: 'international',
-            title: 'International Program', 
+            title: 'International Program',
             desc: 'Global curriculum support including Cambridge, IB, and other international standards.',
-            level: 'Primary - High School', 
-            lessons: 94, 
+            level: 'Primary - High School',
+            lessons: 94,
             img: internationalProgramImg,
             color: 'from-orange-600 to-orange-400'
         },
-        { 
+        {
             id: 'other',
-            title: 'Other School Contents', 
+            title: 'Other School Contents',
             desc: 'Supplementary materials, extra-curricular courses, and vocational training.',
-            level: 'All Ages', 
-            lessons: 48, 
+            level: 'All Ages',
+            lessons: 48,
             img: otherSchoolContentsImg,
             color: 'from-purple-600 to-purple-400'
         }
@@ -116,7 +172,7 @@ export const Programs = () => {
         const newProfile = { ...profile, grade: currentGrade };
         setProfile(newProfile);
         localStorage.setItem('soma_profile', JSON.stringify(newProfile));
-        
+
         // Initialize student progress with courses from this grade
         const studentProgress = {
             email: newProfile.name || 'student',
@@ -129,7 +185,7 @@ export const Programs = () => {
             }))
         };
         localStorage.setItem('soma_student_progress', JSON.stringify(studentProgress));
-        
+
         // Trigger storage event for Dashboard
         window.dispatchEvent(new Event('storage'));
         alert(`Successfully enrolled in ${currentGrade}!`);
@@ -146,8 +202,8 @@ export const Programs = () => {
         <Layout title="Programs">
             <div className="mb-6 md:mb-8 flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div className="flex items-center gap-2 overflow-x-auto no-scrollbar py-1">
-                    <button 
-                        onClick={() => setPath([])} 
+                    <button
+                        onClick={() => setPath([])}
                         className={`text-sm font-bold whitespace-nowrap ${path.length === 0 ? 'text-primary' : 'text-gray-400 hover:text-gray-600'}`}
                     >
                         Programs
@@ -155,8 +211,8 @@ export const Programs = () => {
                     {path.length > 0 && (
                         <>
                             <ChevronRight size={14} className="text-gray-300 flex-shrink-0" />
-                            <button 
-                                onClick={() => setPath([path[0]])} 
+                            <button
+                                onClick={() => setPath([path[0]])}
                                 className={`text-sm font-bold whitespace-nowrap ${path.length === 1 ? 'text-primary' : 'text-gray-400 hover:text-gray-600'}`}
                             >
                                 {currentProgram?.title}
@@ -166,8 +222,8 @@ export const Programs = () => {
                     {path.length > 1 && (
                         <>
                             <ChevronRight size={14} className="text-gray-300 flex-shrink-0" />
-                            <button 
-                                onClick={() => setPath([path[0], path[1]])} 
+                            <button
+                                onClick={() => setPath([path[0], path[1]])}
                                 className={`text-sm font-bold whitespace-nowrap ${path.length === 2 ? 'text-primary' : 'text-gray-400 hover:text-gray-600'}`}
                             >
                                 {currentLevel?.name}
@@ -183,7 +239,7 @@ export const Programs = () => {
                 </div>
 
                 {path.length === 3 && !isEnrolledInCurrentGrade && (
-                    <button 
+                    <button
                         onClick={handleEnroll}
                         className="flex items-center justify-center gap-2 px-6 py-2.5 bg-primary text-white rounded-xl text-sm font-bold hover:bg-primary-dark transition-all shadow-md active:scale-95"
                     >
@@ -213,7 +269,7 @@ export const Programs = () => {
                                         <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Contents</span>
                                         <span className="text-xs md:text-sm font-bold text-gray-900">{program.lessons}+ Lessons</span>
                                     </div>
-                                    <button 
+                                    <button
                                         onClick={() => setPath([program.id])}
                                         className="w-10 h-10 md:w-12 md:h-12 bg-gray-50 rounded-xl md:rounded-2xl flex items-center justify-center text-primary group-hover:bg-primary group-hover:text-white transition-all duration-300 shadow-sm flex-shrink-0"
                                     >
@@ -229,8 +285,8 @@ export const Programs = () => {
             {path.length === 1 && currentProgram?.levels && (
                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
                     {currentProgram.levels.map(lvl => (
-                        <div 
-                            key={lvl.id} 
+                        <div
+                            key={lvl.id}
                             onClick={() => setPath([...path, lvl.id])}
                             className="bg-white/40 backdrop-blur-md rounded-2xl md:rounded-[2.5rem] border border-primary/10 hover:shadow-2xl transition-all duration-500 cursor-pointer group flex flex-col overflow-hidden"
                         >
@@ -257,9 +313,9 @@ export const Programs = () => {
                     {currentLevel.grades.map(grade => {
                         const isEnrolled = profile.grade === grade;
                         const isEnrolledElsewhere = profile.grade && profile.grade !== grade;
-                        
+
                         return (
-                            <div 
+                            <div
                                 key={grade}
                                 onClick={() => setPath([...path, grade])}
                                 className={`
@@ -305,7 +361,7 @@ export const Programs = () => {
                             </div>
                             <h4 className="font-bold text-gray-900 mb-1">{course.name}</h4>
                             <p className="text-xs text-gray-400 mb-4">Facilitator: {course.teacher}</p>
-                            <button 
+                            <button
                                 disabled={!isEnrolledInCurrentGrade}
                                 className={`w-full py-2 rounded-xl text-xs font-bold transition-colors ${isEnrolledInCurrentGrade ? 'bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white' : 'bg-gray-100 text-gray-400 cursor-not-allowed'}`}
                             >
@@ -370,7 +426,7 @@ export const Messages = () => {
             [selectedChat]: [...(prev[selectedChat] || []), newMessage]
         }));
 
-        setContacts(prev => prev.map(c => 
+        setContacts(prev => prev.map(c =>
             c.id === selectedChat ? { ...c, msg: messageText, time: 'Just now' } : c
         ));
 
@@ -398,7 +454,7 @@ export const Messages = () => {
     };
 
     const studentEnrolledGrade = profile.grade;
-    
+
     // Filter contacts based on: 
     // 1. Tab (Chat vs Groups)
     // 2. Grade (Must match student's grade)
@@ -424,7 +480,7 @@ export const Messages = () => {
                         <p className="text-gray-500 max-w-sm mb-8">
                             You need to enroll in a grade to start chatting with your classmates.
                         </p>
-                        <button 
+                        <button
                             onClick={() => navigate('/programs')}
                             className="px-8 py-3 bg-primary text-white rounded-2xl font-bold hover:bg-primary-dark transition-all shadow-lg active:scale-95"
                         >
@@ -441,12 +497,12 @@ export const Messages = () => {
                             <div className="p-4 border-b border-gray-50 flex gap-2">
                                 <div className="relative flex-1">
                                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
-                                    <input 
-                                        placeholder="Search" 
-                                        className="w-full pl-10 pr-4 py-2 bg-primary-surface/60 border-none rounded-xl text-sm outline-none focus:ring-2 focus:ring-primary/20" 
+                                    <input
+                                        placeholder="Search"
+                                        className="w-full pl-10 pr-4 py-2 bg-primary-surface/60 border-none rounded-xl text-sm outline-none focus:ring-2 focus:ring-primary/20"
                                     />
                                 </div>
-                                <button 
+                                <button
                                     onClick={handleCreateGroup}
                                     className="p-2 bg-blue-50 text-blue-600 rounded-xl hover:bg-blue-100 transition-colors"
                                     title="Create Group"
@@ -455,13 +511,13 @@ export const Messages = () => {
                                 </button>
                             </div>
                             <div className="flex border-b border-gray-50 text-xs font-bold text-gray-400">
-                                <button 
+                                <button
                                     onClick={() => setIsGroupTab(false)}
                                     className={`flex-1 py-3 transition-colors ${!isGroupTab ? 'text-primary border-b-2 border-primary' : 'hover:text-gray-600'}`}
                                 >
                                     Chat
                                 </button>
-                                <button 
+                                <button
                                     onClick={() => setIsGroupTab(true)}
                                     className={`flex-1 py-3 transition-colors ${isGroupTab ? 'text-[#111827] border-b-2 border-[#111827]' : 'hover:text-gray-600'}`}
                                 >
@@ -475,8 +531,8 @@ export const Messages = () => {
                                     </div>
                                 ) : (
                                     filteredContacts.map((contact) => (
-                                        <div 
-                                            key={contact.id} 
+                                        <div
+                                            key={contact.id}
                                             onClick={() => handleSelectChat(contact.id)}
                                             className={`flex items-center gap-3 p-4 border-b border-gray-50 cursor-pointer transition-colors ${selectedChat === contact.id ? 'bg-blue-50/50' : 'hover:bg-gray-50'}`}
                                         >
@@ -502,7 +558,7 @@ export const Messages = () => {
                                     {/* Chat Header */}
                                     <div className="p-4 border-b border-gray-50 flex items-center justify-between">
                                         <div className="flex items-center gap-3">
-                                            <button 
+                                            <button
                                                 onClick={() => setIsListView(true)}
                                                 className="md:hidden p-2 text-gray-400 hover:text-gray-600 rounded-lg"
                                             >
@@ -532,8 +588,8 @@ export const Messages = () => {
                                                 {msg.sender === 'them' && <img src={activeContact.avatar} className="w-7 h-7 md:w-8 md:h-8 rounded-full border border-gray-100 flex-shrink-0" alt="avatar" />}
                                                 <div className={`
                                                     p-2.5 md:p-3 rounded-2xl text-xs md:text-sm max-w-[70%] sm:max-w-md shadow-sm text-left font-medium
-                                                    ${msg.sender === 'me' 
-                                                        ? 'bg-primary text-white rounded-tr-none shadow-md' 
+                                                    ${msg.sender === 'me'
+                                                        ? 'bg-primary text-white rounded-tr-none shadow-md'
                                                         : 'bg-gray-200 text-gray-800 rounded-tl-none'}
                                                 `}>
                                                     {msg.text}
@@ -553,14 +609,14 @@ export const Messages = () => {
                                             <Paperclip size={18} className="md:w-5 md:h-5 rotate-45" />
                                         </button>
                                         <div className="flex-1 relative">
-                                            <input 
+                                            <input
                                                 value={messageText}
                                                 onChange={(e) => setMessageText(e.target.value)}
                                                 onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()}
-                                                placeholder="Type a message..." 
-                                                className="w-full px-3 md:px-4 py-2 md:py-3 bg-primary-surface/40 border border-primary/5 rounded-xl md:rounded-2xl text-xs md:text-sm outline-none focus:border-primary transition-all font-medium pr-10 md:pr-12" 
+                                                placeholder="Type a message..."
+                                                className="w-full px-3 md:px-4 py-2 md:py-3 bg-primary-surface/40 border border-primary/5 rounded-xl md:rounded-2xl text-xs md:text-sm outline-none focus:border-primary transition-all font-medium pr-10 md:pr-12"
                                             />
-                                            <button 
+                                            <button
                                                 onClick={handleSendMessage}
                                                 className="absolute right-1.5 md:right-2 top-1/2 -translate-y-1/2 p-1.5 md:p-2 bg-primary text-white rounded-lg md:rounded-xl hover:bg-primary-dark transition-colors shadow-sm flex-shrink-0"
                                             >
@@ -587,7 +643,7 @@ export const Settings = () => {
     const { user, updateUser, deleteAccount } = useAuth();
     const navigate = useNavigate();
     const [activeSection, setActiveSection] = React.useState<'main' | 'personal' | 'security' | 'notifications'>('main');
-    
+
     // User profile state
     const [profile, setProfile] = React.useState(() => {
         const saved = localStorage.getItem('soma_profile');
@@ -694,28 +750,28 @@ export const Settings = () => {
                     <form onSubmit={handleProfileSubmit} className="space-y-6">
                         <div className="space-y-2">
                             <label className="text-sm font-bold text-gray-700 block">Full Name</label>
-                            <input 
+                            <input
                                 name="name"
                                 defaultValue={profile.name}
                                 className="w-full px-4 py-3 bg-gray-50 border border-gray-100 rounded-2xl outline-none focus:border-primary transition-all font-medium"
-                                required 
+                                required
                             />
                         </div>
                         <div className={`space-y-4 md:space-y-0 md:flex md:gap-4 ${user?.role !== 'Student' ? 'block' : ''}`}>
                             <div className="flex-1 space-y-2">
                                 <label className="text-sm font-bold text-gray-700 block">Email Address</label>
-                                <input 
+                                <input
                                     name="email"
                                     type="email"
                                     defaultValue={profile.email}
                                     className="w-full px-4 py-3 bg-gray-50 border border-gray-100 rounded-2xl outline-none focus:border-primary transition-all font-medium"
-                                    required 
+                                    required
                                 />
                             </div>
                             {user?.role === 'Student' && (
                                 <div className="w-full md:w-32 space-y-2">
                                     <label className="text-sm font-bold text-gray-700 block">Grade/Level</label>
-                                    <select 
+                                    <select
                                         name="grade"
                                         defaultValue={profile.grade || 'S2'}
                                         className="w-full px-4 py-3 bg-gray-50 border border-gray-100 rounded-2xl outline-none focus:border-[#3B82F6] transition-all font-medium appearance-none"
@@ -727,20 +783,20 @@ export const Settings = () => {
                         </div>
                         <div className="space-y-2">
                             <label className="text-sm font-bold text-gray-700 block">Phone Number</label>
-                            <input 
+                            <input
                                 name="phone"
                                 defaultValue={profile.phone}
                                 className="w-full px-4 py-3 bg-gray-50 border border-gray-100 rounded-2xl outline-none focus:border-primary transition-all font-medium"
-                                required 
+                                required
                             />
                         </div>
                         <div className="space-y-2">
                             <label className="text-sm font-bold text-gray-700 block">Profile Photo</label>
                             <div className="flex items-center gap-4">
                                 <div className="relative">
-                                    <img 
-                                        src={uploadedAvatar || profile.avatar} 
-                                        alt="Avatar" 
+                                    <img
+                                        src={uploadedAvatar || profile.avatar}
+                                        alt="Avatar"
                                         className="w-20 h-20 rounded-full object-cover border-2 border-primary/20"
                                     />
                                     {uploadedAvatar && (
@@ -754,7 +810,7 @@ export const Settings = () => {
                                         <label className="flex items-center gap-2 px-4 py-2.5 bg-primary text-white rounded-xl font-bold cursor-pointer hover:bg-primary-dark transition-all w-fit">
                                             <Upload size={18} />
                                             Upload Image
-                                            <input 
+                                            <input
                                                 type="file"
                                                 accept="image/*"
                                                 onChange={handleAvatarUpload}
@@ -776,7 +832,7 @@ export const Settings = () => {
                                 </div>
                             </div>
                             {/* Hidden input to keep URL as fallback - removed the visible URL input */}
-                            <input 
+                            <input
                                 name="avatar"
                                 type="hidden"
                                 value={uploadedAvatar || profile.avatar}
@@ -801,26 +857,26 @@ export const Settings = () => {
                     <form onSubmit={handlePasswordSubmit} className="space-y-6">
                         <div className="space-y-2">
                             <label className="text-sm font-bold text-gray-700 block">Current Password</label>
-                            <input 
+                            <input
                                 type="password"
                                 className="w-full px-4 py-3 bg-gray-50 border border-gray-100 rounded-2xl outline-none focus:border-primary transition-all font-medium"
-                                required 
+                                required
                             />
                         </div>
                         <div className="space-y-2">
                             <label className="text-sm font-bold text-gray-700 block">New Password</label>
-                            <input 
+                            <input
                                 type="password"
                                 className="w-full px-4 py-3 bg-gray-50 border border-gray-100 rounded-2xl outline-none focus:border-primary transition-all font-medium"
-                                required 
+                                required
                             />
                         </div>
                         <div className="space-y-2">
                             <label className="text-sm font-bold text-gray-700 block">Confirm New Password</label>
-                            <input 
+                            <input
                                 type="password"
                                 className="w-full px-4 py-3 bg-gray-50 border border-gray-100 rounded-2xl outline-none focus:border-[#3B82F6] transition-all font-medium"
-                                required 
+                                required
                             />
                         </div>
                         <button type="submit" className="w-full py-4 bg-primary text-white rounded-2xl font-bold hover:bg-primary-dark transition-all shadow-lg active:scale-95">
@@ -854,7 +910,7 @@ export const Settings = () => {
                                     <div className="font-bold text-gray-900">{item.title}</div>
                                     <div className="text-xs text-gray-400">{item.desc}</div>
                                 </div>
-                                <button 
+                                <button
                                     onClick={() => toggle(item.id as keyof typeof notifications)}
                                     className={`w-12 h-6 rounded-full transition-colors relative ${notifications[item.id as keyof typeof notifications] ? 'bg-[#22C55E]' : 'bg-gray-300'}`}
                                 >
@@ -890,8 +946,8 @@ export const Settings = () => {
                         { id: 'security', title: 'Security', desc: 'Password and authentication settings', icon: Shield },
                         { id: 'notifications', title: 'Notifications', desc: 'Manage your alert preferences', icon: Bell }
                     ].map((item) => (
-                        <div 
-                            key={item.id} 
+                        <div
+                            key={item.id}
                             onClick={() => setActiveSection(item.id as any)}
                             className="flex items-center justify-between p-4 md:p-6 bg-primary-surface/60 rounded-2xl md:rounded-3xl cursor-pointer hover:bg-white hover:shadow-sm border border-transparent hover:border-primary/5 transition-all group"
                         >
@@ -909,8 +965,8 @@ export const Settings = () => {
                             </div>
                         </div>
                     ))}
-                    
-                    <div 
+
+                    <div
                         onClick={handleDeleteClick}
                         className="flex items-center justify-between p-4 md:p-6 bg-red-50/50 rounded-2xl md:rounded-3xl cursor-pointer hover:bg-red-50 transition-all group border border-transparent hover:border-red-100"
                     >
