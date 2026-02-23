@@ -9,6 +9,7 @@ import { EnrollmentDashboard } from './pages/EnrollmentDashboard'
 import { FacilitatorDashboard } from './pages/FacilitatorDashboard'
 import { Library, Programs, Messages, Settings } from './pages/SubPages'
 import StudyCourse from './pages/StudyCourse'
+import StudyTopic from './pages/StudyTopic'
 import { AuthProvider, useAuth, UserRole } from './auth'
 
 // Editor Imports
@@ -69,6 +70,14 @@ export default function App() {
               element={
                 <RoleRoute allowedRoles={['Student']}>
                   <StudyCourse />
+                </RoleRoute>
+              }
+            />
+            <Route
+              path="/student/study_topic/:topicId"
+              element={
+                <RoleRoute allowedRoles={['Student']}>
+                  <StudyTopic />
                 </RoleRoute>
               }
             />

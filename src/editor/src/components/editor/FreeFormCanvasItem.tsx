@@ -59,6 +59,11 @@ export const FreeFormCanvasItem: React.FC<FreeFormCanvasItemProps> = ({ element 
     }, [element.id, element.type, element.style.height, dispatch]);
 
     const renderContent = () => {
+        const baseStyle = { ...element.style };
+        // Remove width/height from the inner style because Rnd handles them
+        delete baseStyle.width;
+        delete baseStyle.height;
+
         switch (element.type) {
             case 'text':
                 return (
@@ -66,6 +71,7 @@ export const FreeFormCanvasItem: React.FC<FreeFormCanvasItemProps> = ({ element 
                         contentEditable
                         suppressContentEditableWarning
                         onBlur={(e) => handleContentUpdate(e.currentTarget.textContent || '')}
+                        style={baseStyle}
                         className="outline-none focus:ring-1 focus:ring-primary-light rounded px-1 w-full h-full min-h-[1.5em]"
                     >
                         {element.content || 'Text Element'}
@@ -73,8 +79,16 @@ export const FreeFormCanvasItem: React.FC<FreeFormCanvasItemProps> = ({ element 
                 );
             case 'hero': {
                 const parts = (element.content || '').split('\n');
+                const isGradient = ((element.style as any).backgroundType || 'gradient') === 'gradient';
+                const bg = isGradient
+                    ? `linear-gradient(to bottom right, ${(element.style as any).gradientStart || '#059669'}, ${(element.style as any).gradientEnd || '#047857'})`
+                    : ((element.style as any).backgroundColor || '#059669');
+
                 return (
-                    <div className="text-center w-full h-full flex flex-col justify-center">
+                    <div
+                        style={{ ...baseStyle, background: bg }}
+                        className="text-center w-full h-full flex flex-col justify-center p-8 text-white rounded-3xl shadow-xl overflow-hidden"
+                    >
                         <h1
                             contentEditable
                             suppressContentEditableWarning
@@ -83,7 +97,7 @@ export const FreeFormCanvasItem: React.FC<FreeFormCanvasItemProps> = ({ element 
                                 newParts[0] = e.currentTarget.textContent || '';
                                 handleContentUpdate(newParts.join('\n'));
                             }}
-                            className="text-4xl font-extrabold mb-2 outline-none"
+                            className="text-3xl md:text-4xl font-extrabold mb-2 outline-none drop-shadow-md"
                         >
                             {parts[0] || 'Hero Title'}
                         </h1>
@@ -95,7 +109,7 @@ export const FreeFormCanvasItem: React.FC<FreeFormCanvasItemProps> = ({ element 
                                 newParts[1] = e.currentTarget.textContent || '';
                                 handleContentUpdate(newParts.join('\n'));
                             }}
-                            className="text-xl text-gray-500 outline-none"
+                            className="text-lg opacity-90 font-medium outline-none"
                         >
                             {parts[1] || 'Subtext goes here'}
                         </p>
@@ -104,7 +118,7 @@ export const FreeFormCanvasItem: React.FC<FreeFormCanvasItemProps> = ({ element 
             }
             case 'image':
                 return (
-                    <div className="w-full h-full bg-gray-100 rounded-lg overflow-hidden flex items-center justify-center">
+                    <div style={baseStyle} className="w-full h-full bg-gray-100 rounded-lg overflow-hidden flex items-center justify-center">
                         {element.content ? (
                             <img src={element.content} alt="Content" className="w-full h-full object-cover pointer-events-none" />
                         ) : (
@@ -114,7 +128,7 @@ export const FreeFormCanvasItem: React.FC<FreeFormCanvasItemProps> = ({ element 
                 );
             case 'video':
                 return (
-                    <div className="w-full h-full bg-gray-900 rounded-lg flex items-center justify-center text-white overflow-hidden pointer-events-none relative">
+                    <div style={baseStyle} className="w-full h-full bg-gray-900 rounded-lg flex items-center justify-center text-white overflow-hidden pointer-events-none relative">
                         {element.content ? (
                             <div className="p-4 text-center">
                                 <p className="text-[10px] text-gray-400 mb-1 uppercase tracking-widest font-bold">Video Clip</p>
@@ -130,7 +144,7 @@ export const FreeFormCanvasItem: React.FC<FreeFormCanvasItemProps> = ({ element 
             case 'list': {
                 const items = (element.content || '').split(',').filter(i => i.trim());
                 return (
-                    <div className="w-full h-full p-2">
+                    <div style={baseStyle} className="w-full h-full p-2">
                         <ul className="list-disc list-inside space-y-2">
                             {items.length === 0 ? (
                                 <li className="text-gray-400 italic">No items (use comma to separate)</li>
@@ -146,6 +160,7 @@ export const FreeFormCanvasItem: React.FC<FreeFormCanvasItemProps> = ({ element 
                                                 handleContentUpdate(newItems.join(','));
                                             }}
                                             className="outline-none"
+                                            style={{ color: 'inherit' }}
                                         >
                                             {item.trim()}
                                         </span>
@@ -165,7 +180,7 @@ export const FreeFormCanvasItem: React.FC<FreeFormCanvasItemProps> = ({ element 
 
             default:
                 return (
-                    <div className="w-full h-full flex items-center justify-center bg-gray-50 border border-dashed border-gray-300 rounded text-gray-400 text-xs italic">
+                    <div style={baseStyle} className="w-full h-full flex items-center justify-center bg-gray-50 border border-dashed border-gray-300 rounded text-gray-400 text-xs italic">
                         {element.type} Component
                     </div>
                 );

@@ -49,7 +49,7 @@ export const Canvas: React.FC = () => {
                         minHeight: canvasMinHeight > 0 ? `${canvasMinHeight}px` : '800px',
                         transform: `scale(${scale})`,
                         transformOrigin: 'top center',
-                        width: '850px' // Base editor width
+                        width: '800px' // Base editor width (Match renderer)
                     }}
                     className={cn(
                         "bg-white shadow-2xl border border-gray-100 p-8 transition-all duration-300 relative z-0",

@@ -107,12 +107,17 @@ const RenderElement: React.FC<{ element: EditorElement; topicId: string }> = ({ 
 
 const HeroComponent: React.FC<{ element: EditorElement; style: React.CSSProperties }> = ({ element, style }) => {
     const parts = (element.content || '').split('\n');
+    const isGradient = ((element.style as any).backgroundType || 'gradient') === 'gradient';
+    const bg = isGradient
+        ? `linear-gradient(to bottom right, ${(element.style as any).gradientStart || '#059669'}, ${(element.style as any).gradientEnd || '#047857'})`
+        : ((element.style as any).backgroundColor || '#059669');
+
     return (
-        <div style={style} className="text-center w-full h-full flex flex-col justify-center p-8 bg-gradient-to-br from-primary to-primary-dark text-white rounded-3xl shadow-xl">
-            <h1 className="text-4xl md:text-5xl font-extrabold mb-4 drop-shadow-md">
+        <div style={{ ...style, background: bg }} className="text-center w-full h-full flex flex-col justify-center p-8 text-white rounded-3xl shadow-xl overflow-hidden">
+            <h1 className="text-3xl md:text-4xl font-extrabold mb-2 drop-shadow-md">
                 {parts[0] || 'Hero Title'}
             </h1>
-            <p className="text-xl opacity-90 font-medium max-w-2xl mx-auto">
+            <p className="text-lg opacity-90 font-medium max-w-2xl mx-auto">
                 {parts[1] || 'Subtext goes here'}
             </p>
         </div>

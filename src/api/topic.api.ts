@@ -13,3 +13,8 @@ export const getTopicsByCourseId = async (courseId: string) => {
     const response = await api.get(`/topic/bycourse?query=${courseId}`);
     return response;
 };
+
+export const getTopicById = async (topicId: string) => {
+    const response = await api.get(`/topic/${topicId}`);
+    return response;
+};

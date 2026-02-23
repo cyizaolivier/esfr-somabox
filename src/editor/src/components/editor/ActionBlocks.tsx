@@ -10,6 +10,8 @@ interface ActionBlockProps {
 export const QuizBlock: React.FC<ActionBlockProps> = ({ element, onUpdate }) => {
     const metadata = element.metadata || { questions: [{ id: '1', question: 'New Question', options: ['Option 1', 'Option 2'], correct: 0 }] };
 
+    console.log(metadata)
+
     const updateQuestion = (qIdx: number, updates: any) => {
         const newQuestions = [...metadata.questions];
         newQuestions[qIdx] = { ...newQuestions[qIdx], ...updates };

@@ -1,12 +1,13 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useEditor } from '../../state/EditorContext';
-import { X, Sparkles, Plus, Trash2, Clock, FileText, MessageSquare } from 'lucide-react';
+import { X, Sparkles, Plus, Trash2, Clock, FileText, MessageSquare, Loader2 } from 'lucide-react';
 import { cn } from '../../lib/utils';
-import { mockGenerateQuiz } from '../../lib/aiService';
+import { mockGenerateQuiz, generateRealQuiz } from '../../lib/aiService';
 
 export const PropertiesPanel: React.FC = () => {
 
     const { state, dispatch } = useEditor();
+    const [isGenerating, setIsGenerating] = useState(false);
     const selectedElement = state.elements.find(el => el.id === state.selectedElementId);
 
     if (!selectedElement) {
@@ -174,37 +175,162 @@ export const PropertiesPanel: React.FC = () => {
                     </div>
                 </div>
 
+                {/* Hero specialized background settings */}
+                {selectedElement.type === 'hero' && (
+                    <div className="space-y-4 p-4 bg-gray-50 rounded-xl border border-gray-200">
+                        <label className="text-xs font-semibold text-gray-600 block border-b pb-2 mb-2">Background Style</label>
+
+                        <div className="flex gap-2 mb-4">
+                            <button
+                                onClick={() => handleStyleChange('backgroundType', 'solid')}
+                                className={cn(
+                                    "flex-1 py-1.5 px-2 rounded-lg text-xs font-bold transition-all",
+                                    ((selectedElement.style as any).backgroundType || 'gradient') === 'solid'
+                                        ? "bg-primary text-white shadow-md shadow-primary/20"
+                                        : "bg-white border border-gray-200 text-gray-400 hover:border-primary/50"
+                                )}
+                            >
+                                Solid
+                            </button>
+                            <button
+                                onClick={() => handleStyleChange('backgroundType', 'gradient')}
+                                className={cn(
+                                    "flex-1 py-1.5 px-2 rounded-lg text-xs font-bold transition-all",
+                                    ((selectedElement.style as any).backgroundType || 'gradient') === 'gradient'
+                                        ? "bg-primary text-white shadow-md shadow-primary/20"
+                                        : "bg-white border border-gray-200 text-gray-400 hover:border-primary/50"
+                                )}
+                            >
+                                Gradient
+                            </button>
+                        </div>
+
+                        {((selectedElement.style as any).backgroundType || 'gradient') === 'solid' ? (
+                            <div className="space-y-1">
+                                <span className="text-[10px] text-gray-400 block uppercase font-bold">Fill Color</span>
+                                <input
+                                    type="color"
+                                    className="w-full h-10 border border-gray-200 rounded-lg p-1 cursor-pointer"
+                                    value={((selectedElement.style as any).backgroundColor as string) || '#059669'}
+                                    onChange={(e) => handleStyleChange('backgroundColor', e.target.value)}
+                                />
+                            </div>
+                        ) : (
+                            <div className="grid grid-cols-2 gap-3">
+                                <div className="space-y-1">
+                                    <span className="text-[10px] text-gray-400 block uppercase font-bold">Start Color</span>
+                                    <input
+                                        type="color"
+                                        className="w-full h-10 border border-gray-200 rounded-lg p-1 cursor-pointer"
+                                        value={((selectedElement.style as any).gradientStart as string) || '#059669'}
+                                        onChange={(e) => handleStyleChange('gradientStart', e.target.value)}
+                                    />
+                                </div>
+                                <div className="space-y-1">
+                                    <span className="text-[10px] text-gray-400 block uppercase font-bold">End Color</span>
+                                    <input
+                                        type="color"
+                                        className="w-full h-10 border border-gray-200 rounded-lg p-1 cursor-pointer"
+                                        value={((selectedElement.style as any).gradientEnd as string) || '#047857'}
+                                        onChange={(e) => handleStyleChange('gradientEnd', e.target.value)}
+                                    />
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                )}
+
                 {/* Quiz specialized settings */}
                 {selectedElement.type === 'quiz' && (
                     <div className="space-y-4 p-4 bg-purple-50 rounded-xl border border-purple-100">
-                        <div className="flex items-center gap-2 text-purple-700 font-bold text-xs uppercase">
-                            <Sparkles size={14} />
-                            <span>AI Generator</span>
+                        <div className="flex items-center justify-between border-b border-purple-100 pb-2 mb-2">
+                            <div className="flex items-center gap-2 text-purple-700 font-bold text-xs uppercase">
+                                <Sparkles size={14} />
+                                <span>AI Generator</span>
+                            </div>
+                            <button
+                                onClick={() => {
+                                    const content = state.elements
+                                        .filter(el => el.id !== selectedElement.id)
+                                        .map(el => {
+                                            if (el.type === 'text') return (el.content || '').replace(/<[^>]*>?/gm, '');
+                                            if (el.type === 'hero') return (el.content || '').replace('\n', ': ');
+                                            if (el.type === 'list') return "List items: " + el.content;
+                                            return "";
+                                        })
+                                        .filter(t => t.length > 0)
+                                        .join("\n\n");
+
+                                    const textarea = document.getElementById('ai-prompt') as HTMLTextAreaElement;
+                                    if (textarea) textarea.value = content;
+                                }}
+                                className="text-[10px] font-black text-purple-600 hover:text-purple-800 underline"
+                            >
+                                Scrape from Canvas
+                            </button>
                         </div>
-                        <p className="text-[10px] text-purple-600">Paste content below to generate quiz questions using AI.</p>
+                        <p className="text-[10px] text-purple-600">Paste content below or scrape from canvas to generate quiz questions using AI.</p>
                         <textarea
                             id="ai-prompt"
-                            className="w-full text-sm border border-purple-200 rounded-lg p-2 h-24 focus:ring-2 focus:ring-purple-500 focus:outline-none bg-white"
+                            className="w-full text-sm border border-purple-200 rounded-lg p-2 h-32 focus:ring-2 focus:ring-purple-500 focus:outline-none bg-white font-medium"
                             placeholder="Paste a paragraph here..."
                         />
                         <button
+                            disabled={isGenerating}
                             onClick={async () => {
                                 const prompt = (document.getElementById('ai-prompt') as HTMLTextAreaElement).value;
-                                if (!prompt) return alert('Please paste some text first!');
+                                if (!prompt) return alert('Please provide some text first!');
+
+                                setIsGenerating(true);
                                 try {
-                                    const result = await mockGenerateQuiz(prompt);
+                                    const result = await generateRealQuiz(prompt);
                                     dispatch({
                                         type: 'UPDATE_ELEMENT',
                                         payload: { id: selectedElement.id, metadata: result }
                                     });
                                 } catch (e) {
-                                    alert('Failed to generate quiz');
+                                    console.error("AI Generation Error", e);
+                                    alert('Failed to generate real quiz. Falling back to mock.');
+                                    // Fallback to mock for testing if real fails
+                                    const mockResult = await mockGenerateQuiz(prompt);
+                                    dispatch({
+                                        type: 'UPDATE_ELEMENT',
+                                        payload: { id: selectedElement.id, metadata: mockResult }
+                                    });
+                                } finally {
+                                    setIsGenerating(false);
                                 }
                             }}
-                            className="w-full py-2 bg-purple-600 text-white rounded-lg text-xs font-bold hover:bg-purple-700 transition-colors flex items-center justify-center gap-2"
+                            className={cn(
+                                "w-full py-3 rounded-lg text-xs font-black transition-all flex items-center justify-center gap-2 shadow-lg",
+                                isGenerating
+                                    ? "bg-purple-400 cursor-not-allowed text-white"
+                                    : "bg-purple-600 text-white hover:bg-purple-700 shadow-purple-600/20"
+                            )}
                         >
-                            <Sparkles size={14} /> Generate with AI
+                            {isGenerating ? (
+                                <Loader2 size={16} className="animate-spin" />
+                            ) : (
+                                <Sparkles size={16} />
+                            )}
+                            {isGenerating ? 'Generating...' : 'Generate with Real AI'}
                         </button>
+
+                        <div className="flex flex-col gap-1 opacity-50">
+                            <button
+                                onClick={async () => {
+                                    const prompt = (document.getElementById('ai-prompt') as HTMLTextAreaElement).value;
+                                    const result = await mockGenerateQuiz(prompt || "Default content");
+                                    dispatch({
+                                        type: 'UPDATE_ELEMENT',
+                                        payload: { id: selectedElement.id, metadata: result }
+                                    });
+                                }}
+                                className="text-[10px] text-center text-purple-400 hover:underline"
+                            >
+                                Use Mock Generator (Testing)
+                            </button>
+                        </div>
                     </div>
                 )}
 

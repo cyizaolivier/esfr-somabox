@@ -84,7 +84,7 @@ const StudyCourse: React.FC = () => {
                             {topics.sort((a, b) => a.order - b.order).map((topic, index) => (
                                 <div
                                     key={topic.id}
-                                    onClick={() => navigate(`/facilitator/preview/${topic.id}`)}
+                                    onClick={() => navigate(`/student/study_topic/${topic.id}`)}
                                     className="group bg-white/40 backdrop-blur-md border border-primary/5 rounded-[2rem] p-6 flex flex-col md:flex-row md:items-center gap-6 hover:shadow-2xl hover:border-primary/20 transition-all duration-500 cursor-pointer relative overflow-hidden"
                                 >
                                     <div className="w-16 h-16 md:w-20 md:h-20 bg-gradient-to-br from-primary-surface to-white border border-primary/10 rounded-2xl md:rounded-3xl flex items-center justify-center text-primary group-hover:bg-primary group-hover:text-white transition-all duration-500 shadow-inner flex-shrink-0">
