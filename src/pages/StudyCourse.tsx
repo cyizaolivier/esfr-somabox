@@ -2,31 +2,53 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import DashboardLayout from '../components/DashboardLayout';
 import { getTopicsByCourseId } from '../api/topic.api';
-import { Book, PlayCircle, Clock, ChevronRight, ArrowLeft, Loader2, BookOpen } from 'lucide-react';
+import { getCourseTopicProgress } from '../api/progress.api';
+import { useAuth } from '../auth';
+import { Book, PlayCircle, Clock, ChevronRight, ArrowLeft, Loader2, BookOpen, CheckCircle2 } from 'lucide-react';
+import { cn } from '../editor/src/lib/utils';
+
+// Per-topic progress shape returned by GET /progress/course/:courseId/topic
+interface TopicProgressItem {
+    topicId: string;
+    status: 'not_started' | 'in-progress' | 'completed';
+}
 
 const StudyCourse: React.FC = () => {
     const { courseId } = useParams<{ courseId: string }>();
     const navigate = useNavigate();
     const [topics, setTopics] = useState<any[]>([]);
+    const [topicProgress, setTopicProgress] = useState<TopicProgressItem[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const { user } = useAuth();
 
     useEffect(() => {
-        const fetchTopics = async () => {
+        const fetchData = async () => {
             if (!courseId) return;
             try {
-                const response = await getTopicsByCourseId(courseId);
-                setTopics(response.data);
+                const [topicsRes, progressRes] = await Promise.all([
+                    getTopicsByCourseId(courseId),
+                    getCourseTopicProgress(courseId)
+                ]);
+                setTopics(topicsRes.data);
+                // Backend returns array: [{ topicId, status }]
+                setTopicProgress(progressRes.data ?? []);
             } catch (err) {
-                console.error('Error fetching topics:', err);
+                console.error('Error fetching course data:', err);
                 setError('Failed to load course content. Please try again later.');
             } finally {
                 setLoading(false);
             }
         };
 
-        fetchTopics();
+        fetchData();
     }, [courseId]);
+
+    // Look up per-topic status from the dedicated topic progress list
+    const getTopicStatus = (topicId: string): 'not_started' | 'in-progress' | 'completed' => {
+        const entry = topicProgress.find(p => p.topicId === topicId);
+        return entry?.status ?? 'not_started';
+    };
 
     return (
         <DashboardLayout title="Study Course">
@@ -81,42 +103,59 @@ const StudyCourse: React.FC = () => {
                         </div>
 
                         <div className="grid grid-cols-1 gap-4">
-                            {topics.sort((a, b) => a.order - b.order).map((topic, index) => (
-                                <div
-                                    key={topic.id}
-                                    onClick={() => navigate(`/student/study_topic/${topic.id}`)}
-                                    className="group bg-white/40 backdrop-blur-md border border-primary/5 rounded-[2rem] p-6 flex flex-col md:flex-row md:items-center gap-6 hover:shadow-2xl hover:border-primary/20 transition-all duration-500 cursor-pointer relative overflow-hidden"
-                                >
-                                    <div className="w-16 h-16 md:w-20 md:h-20 bg-gradient-to-br from-primary-surface to-white border border-primary/10 rounded-2xl md:rounded-3xl flex items-center justify-center text-primary group-hover:bg-primary group-hover:text-white transition-all duration-500 shadow-inner flex-shrink-0">
-                                        <span className="text-xl md:text-2xl font-black">{index + 1}</span>
-                                    </div>
+                            {topics.sort((a, b) => a.order - b.order).map((topic, index) => {
+                                const status = getTopicStatus(topic.id);
+                                return (
+                                    <div
+                                        key={topic.id}
+                                        onClick={() => navigate(`/student/study_topic/${topic.id}`)}
+                                        className="group bg-white/40 backdrop-blur-md border border-primary/5 rounded-[2rem] p-6 flex flex-col md:flex-row md:items-center gap-6 hover:shadow-2xl hover:border-primary/20 transition-all duration-500 cursor-pointer relative overflow-hidden"
+                                    >
+                                        <div className="w-16 h-16 md:w-20 md:h-20 bg-gradient-to-br from-primary-surface to-white border border-primary/10 rounded-2xl md:rounded-3xl flex items-center justify-center text-primary group-hover:bg-primary group-hover:text-white transition-all duration-500 shadow-inner flex-shrink-0">
+                                            <span className="text-xl md:text-2xl font-black">{index + 1}</span>
+                                        </div>
 
-                                    <div className="flex-1 min-w-0">
-                                        <div className="flex items-center gap-3 mb-2">
-                                            <span className="text-[10px] font-black text-primary uppercase tracking-widest bg-primary/10 px-2.5 py-1 rounded-full">Module {index + 1}</span>
-                                            <div className="flex items-center gap-1 text-[10px] font-bold text-gray-400">
-                                                <Clock size={12} />
-                                                <span>15-20 mins</span>
+                                        <div className="flex-1 min-w-0">
+                                            <div className="flex items-center gap-3 mb-2">
+                                                <span className="text-[10px] font-black text-primary uppercase tracking-widest bg-primary/10 px-2.5 py-1 rounded-full">Module {index + 1}</span>
+                                                <div className="flex items-center gap-1 text-[10px] font-bold text-gray-400">
+                                                    <Clock size={12} />
+                                                    <span>15-20 mins</span>
+                                                </div>
+                                            </div>
+                                            <h3 className="text-lg md:text-xl font-bold text-gray-900 truncate group-hover:text-primary transition-colors">{topic.title}</h3>
+                                            <p className="text-sm text-gray-500 mt-1 line-clamp-1">{topic.description || 'Start learning this module to master the essentials of this course.'}</p>
+                                        </div>
+
+                                        <div className="flex items-center gap-4">
+                                            <div className="flex flex-col items-end hidden md:flex">
+                                                <span className="text-[10px] text-gray-400 font-bold uppercase tracking-tighter mb-1">Status</span>
+                                                {status === 'completed' ? (
+                                                    <span className="text-xs font-black text-green-500 flex items-center gap-1">
+                                                        <CheckCircle2 size={12} />
+                                                        Completed
+                                                    </span>
+                                                ) : status === 'in-progress' ? (
+                                                    <span className="text-xs font-black text-amber-500">In Progress</span>
+                                                ) : (
+                                                    <span className="text-xs font-black text-gray-400">Not Started</span>
+                                                )}
+                                            </div>
+                                            <div className={cn(
+                                                "w-12 h-12 rounded-2xl flex items-center justify-center transition-all duration-300",
+                                                status === 'completed'
+                                                    ? "bg-green-50 text-green-500 group-hover:bg-green-500 group-hover:text-white"
+                                                    : "bg-gray-50 text-gray-400 group-hover:bg-primary group-hover:text-white"
+                                            )}>
+                                                <PlayCircle size={24} />
                                             </div>
                                         </div>
-                                        <h3 className="text-lg md:text-xl font-bold text-gray-900 truncate group-hover:text-primary transition-colors">{topic.title}</h3>
-                                        <p className="text-sm text-gray-500 mt-1 line-clamp-1">{topic.description || 'Start learning this module to master the essentials of this course.'}</p>
-                                    </div>
 
-                                    <div className="flex items-center gap-4">
-                                        <div className="flex flex-col items-end hidden md:flex">
-                                            <span className="text-[10px] text-gray-400 font-bold uppercase tracking-tighter mb-1">Status</span>
-                                            <span className="text-xs font-black text-amber-500">Not Started</span>
-                                        </div>
-                                        <div className="w-12 h-12 bg-gray-50 rounded-2xl flex items-center justify-center text-gray-400 group-hover:bg-primary group-hover:text-white transition-all duration-300">
-                                            <PlayCircle size={24} />
-                                        </div>
+                                        {/* Success/Hover Gradient */}
+                                        <div className="absolute top-0 right-0 w-32 h-full bg-gradient-to-l from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
                                     </div>
-
-                                    {/* Success/Hover Gradient */}
-                                    <div className="absolute top-0 right-0 w-32 h-full bg-gradient-to-l from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
-                                </div>
-                            ))}
+                                );
+                            })}
                         </div>
                     </div>
                 )}

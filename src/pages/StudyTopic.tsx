@@ -1,9 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { getTopicById, getTopicsByCourseId } from '../api/topic.api';
-import { saveProgress, getUserProgress } from '../api/progress.api';
+import { saveProgress, getCourseTopicProgress } from '../api/progress.api';
 import { useAuth } from '../auth';
-import DashboardLayout from '../components/DashboardLayout';
 import {
     ChevronRight,
     ChevronLeft,
@@ -18,6 +17,12 @@ import {
 import { cn } from '../editor/src/lib/utils';
 import { CourseRenderer } from '../editor/src/components/renderer/CourseRenderer';
 
+// Per-topic progress shape returned by GET /progress/course/:courseId/topic
+interface TopicProgressItem {
+    topicId: string;
+    status: 'not_started' | 'in-progress' | 'completed';
+}
+
 const StudyTopic: React.FC = () => {
     const { topicId } = useParams<{ topicId: string }>();
     const navigate = useNavigate();
@@ -25,10 +30,20 @@ const StudyTopic: React.FC = () => {
 
     const [topic, setTopic] = useState<any>(null);
     const [allTopics, setAllTopics] = useState<any[]>([]);
-    const [progress, setProgress] = useState<any[]>([]);
+    const [topicProgress, setTopicProgress] = useState<TopicProgressItem[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [saving, setSaving] = useState(false);
+
+    // Fetch per-topic progress for the course
+    const refreshProgress = useCallback(async (courseId: string) => {
+        try {
+            const progressRes = await getCourseTopicProgress(courseId);
+            setTopicProgress(progressRes.data ?? []);
+        } catch (err) {
+            console.error('Error fetching topic progress:', err);
+        }
+    }, []);
 
     useEffect(() => {
         const fetchData = async () => {
@@ -40,13 +55,12 @@ const StudyTopic: React.FC = () => {
                 const currentTopic = topicRes.data;
                 setTopic(currentTopic);
 
-                // Fetch all topics for the course to show in sidebar
+                // Fetch all topics for the course (for sidebar)
                 const topicsRes = await getTopicsByCourseId(currentTopic.courseId);
                 setAllTopics(topicsRes.data.sort((a: any, b: any) => a.order - b.order));
 
-                // Fetch user progress
-                const progressRes = await getUserProgress();
-                setProgress(progressRes.data);
+                // Fetch per-topic progress
+                await refreshProgress(currentTopic.courseId);
             } catch (err) {
                 console.error('Error fetching topic data:', err);
                 setError('Failed to load topic. Please try again.');
@@ -58,33 +72,70 @@ const StudyTopic: React.FC = () => {
         fetchData();
     }, [topicId]);
 
-    const getTopicStatus = (id: string) => {
-        const topicProgress = progress.find(p => p.last_topic_id === id);
-        if (!topicProgress) return 'not_started';
-        return topicProgress.status; // 'completed', 'pending', etc.
+    // Auto-mark topic as in-progress if not already started
+    useEffect(() => {
+        const markAsStarted = async () => {
+            if (!topic || !user || loading) return;
+
+            const status = getTopicStatus(topic.id);
+            if (status === 'not_started') {
+                try {
+                    const currentIndex = allTopics.findIndex((t: any) => t.id === topic.id);
+                    const progressData = {
+                        studentId: user.id,
+                        courseId: topic.courseId,
+                        progress_percentage: Math.round((currentIndex / allTopics.length) * 100),
+                        last_topic_id: topic.id,
+                        last_topic_number: topic.order,
+                        status: 'in-progress' as const
+                    };
+                    await saveProgress(progressData);
+                    await refreshProgress(topic.courseId);
+                } catch (err) {
+                    console.error('Error auto-starting topic:', err);
+                }
+            }
+        };
+
+        if (topic && user && !loading) {
+            markAsStarted();
+        }
+    }, [topic, user, loading]);
+
+    // Look up status for a given topic using the per-topic list
+    const getTopicStatus = (id: string): 'not_started' | 'in-progress' | 'completed' => {
+        const entry = topicProgress.find(p => p.topicId === id);
+        return entry?.status ?? 'not_started';
     };
+
+    // Correctly count completed topics for progress bar percentage
+    const completedCount = topicProgress.filter(p => p.status === 'completed').length;
+    const progressPercent = allTopics.length > 0
+        ? Math.round((completedCount / allTopics.length) * 100)
+        : 0;
 
     const handleNext = async () => {
         if (!topic || !user) return;
 
         setSaving(true);
         try {
-            // Check if already completed
+            const currentIndex = allTopics.findIndex((t: any) => t.id === topic.id);
             const currentStatus = getTopicStatus(topic.id);
+
             if (currentStatus !== 'completed') {
                 const progressData = {
                     studentId: user.id,
                     courseId: topic.courseId,
-                    progress_percentage: Math.round(((allTopics.findIndex(t => t.id === topic.id) + 1) / allTopics.length) * 100),
+                    progress_percentage: Math.round(((currentIndex + 1) / allTopics.length) * 100),
                     last_topic_id: topic.id,
                     last_topic_number: topic.order,
-                    status: 'completed'
+                    status: 'completed' as const
                 };
                 await saveProgress(progressData);
+                await refreshProgress(topic.courseId);
             }
 
-            // Navigate to next topic or course outline
-            const currentIndex = allTopics.findIndex(t => t.id === topic.id);
+            // Navigate to next topic or back to course outline
             if (currentIndex < allTopics.length - 1) {
                 navigate(`/student/study_topic/${allTopics[currentIndex + 1].id}`);
             } else {
@@ -92,8 +143,14 @@ const StudyTopic: React.FC = () => {
             }
         } catch (err) {
             console.error('Error saving progress:', err);
-            // Still navigate even if progress fails? Maybe notify user.
             setError('Failed to save progress, but you can still continue.');
+            // Navigate anyway so the student isn't blocked
+            const currentIndex = allTopics.findIndex((t: any) => t.id === topic.id);
+            if (currentIndex < allTopics.length - 1) {
+                navigate(`/student/study_topic/${allTopics[currentIndex + 1].id}`);
+            } else {
+                navigate(`/study/${topic.courseId}`);
+            }
         } finally {
             setSaving(false);
         }
@@ -123,6 +180,8 @@ const StudyTopic: React.FC = () => {
             </div>
         );
     }
+
+    const currentTopicIndex = allTopics.findIndex((t: any) => t.id === topic?.id);
 
     return (
         <div className="h-screen w-full flex flex-col bg-slate-50 overflow-hidden">
@@ -160,13 +219,13 @@ const StudyTopic: React.FC = () => {
                         <div className="flex items-center justify-between mb-4">
                             <h2 className="text-sm font-black text-gray-400 uppercase tracking-widest leading-none">Modules</h2>
                             <span className="text-[10px] font-black text-primary bg-primary/10 px-2 py-0.5 rounded-full">
-                                {Math.round((progress.filter(p => p.status === 'completed').length / allTopics.length) * 100) || 0}% Complete
+                                {progressPercent}% Complete
                             </span>
                         </div>
                         <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
                             <div
                                 className="h-full bg-primary transition-all duration-1000"
-                                style={{ width: `${Math.round((progress.filter(p => p.status === 'completed').length / allTopics.length) * 100) || 0}%` }}
+                                style={{ width: `${progressPercent}%` }}
                             />
                         </div>
                     </div>
@@ -226,10 +285,11 @@ const StudyTopic: React.FC = () => {
                     <div className="p-4 md:p-6 bg-white/80 backdrop-blur-md border-t border-gray-100 flex items-center justify-between sticky bottom-0 z-20">
                         <button
                             onClick={() => {
-                                const idx = allTopics.findIndex(t => t.id === topic.id);
-                                if (idx > 0) navigate(`/student/study_topic/${allTopics[idx - 1].id}`);
+                                if (currentTopicIndex > 0) {
+                                    navigate(`/student/study_topic/${allTopics[currentTopicIndex - 1].id}`);
+                                }
                             }}
-                            disabled={allTopics.findIndex(t => t.id === topic.id) === 0}
+                            disabled={currentTopicIndex === 0}
                             className="flex items-center gap-2 px-6 py-3 rounded-2xl font-bold text-gray-500 hover:text-primary transition-all disabled:opacity-0 pointer-events-auto"
                         >
                             <ChevronLeft size={20} />
@@ -246,7 +306,7 @@ const StudyTopic: React.FC = () => {
                             ) : (
                                 <>
                                     <span>
-                                        {allTopics.findIndex(t => t.id === topic.id) === allTopics.length - 1 ? 'Finish Course' : 'Next Topic'}
+                                        {currentTopicIndex === allTopics.length - 1 ? 'Finish Course' : 'Next Topic'}
                                     </span>
                                     <ChevronRight size={20} className="group-hover:translate-x-1 transition-transform" />
                                 </>

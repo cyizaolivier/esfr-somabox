@@ -4,7 +4,7 @@ import Sidebar from '../components/Sidebar'
 import DashboardLayout from '../components/DashboardLayout'
 import { Book, Bookmark, Folder, Search, User, Shield, Bell, HardDrive, PlayCircle, ChevronRight, ArrowLeft, Mail, Download, MoreHorizontal, Paperclip, Send, Menu, MessageSquare, Trash2, CheckSquare, Upload, X } from 'lucide-react'
 import { useAuth } from '../auth'
-import { getAllCourses } from '../api/course.api'
+import { getAllCourses, getCoursesByLevel, searchCourses } from '../api/course.api'
 import rwandanProgramImg from '../assets/Rwandan program.jpg'
 import internationalProgramImg from '../assets/international program.jpg'
 import otherSchoolContentsImg from '../assets/other school contents.jpg'
@@ -18,14 +18,18 @@ const Layout = DashboardLayout;
 export const Library = () => {
     const navigate = useNavigate();
     const [courses, setCourses] = React.useState<any[]>([]);
+    const [searchResults, setSearchResults] = React.useState<any[]>([]);
+    const [searchQuery, setSearchQuery] = React.useState('');
     const [loading, setLoading] = React.useState(true);
+    const [searching, setSearching] = React.useState(false);
     const [error, setError] = React.useState<string | null>(null);
+    const debounceRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
 
+    // Load all courses on mount
     React.useEffect(() => {
         const fetchCourses = async () => {
             try {
                 const response = await getAllCourses();
-                // Assuming response.data is the array based on user's hint
                 setCourses(response.data);
             } catch (err) {
                 setError('Failed to load courses');
@@ -37,15 +41,66 @@ export const Library = () => {
         fetchCourses();
     }, []);
 
+    // Debounced search on keyup
+    const handleSearchKeyUp = (e: React.KeyboardEvent<HTMLInputElement>) => {
+        const query = (e.target as HTMLInputElement).value.trim();
+        setSearchQuery(query);
+
+        if (debounceRef.current) clearTimeout(debounceRef.current);
+
+        if (!query) {
+            setSearchResults([]);
+            setSearching(false);
+            return;
+        }
+
+        debounceRef.current = setTimeout(async () => {
+            setSearching(true);
+            try {
+                const response = await searchCourses(query);
+                setSearchResults(response.data ?? []);
+            } catch (err) {
+                console.error('Search error:', err);
+                setSearchResults([]);
+            } finally {
+                setSearching(false);
+            }
+        }, 350);
+    };
+
+    // Show search results when query is active, otherwise show all courses
+    const displayedCourses = searchQuery ? searchResults : courses;
+    const isSearchMode = !!searchQuery;
+
     return (
         <Layout title="Library">
             <div className="relative mb-8 md:mb-10 -mt-2">
                 <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
                 <input
-                    placeholder="Search"
+                    placeholder="Search courses..."
+                    onKeyUp={handleSearchKeyUp}
+                    onChange={(e) => {
+                        // Clear results immediately when field is cleared
+                        if (!e.target.value.trim()) {
+                            setSearchQuery('');
+                            setSearchResults([]);
+                        }
+                    }}
                     className="w-full max-w-xl pl-11 pr-4 py-2.5 md:py-3 bg-primary-surface/60 border border-primary/5 rounded-2xl text-sm outline-none focus:bg-white focus:border-primary/20 transition-all font-medium"
                 />
+                {searching && (
+                    <div className="absolute right-4 top-1/2 -translate-y-1/2">
+                        <div className="w-4 h-4 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
+                    </div>
+                )}
             </div>
+
+            {/* Search result heading */}
+            {isSearchMode && !searching && (
+                <p className="text-xs font-bold text-gray-400 mb-4 uppercase tracking-widest">
+                    {searchResults.length} result{searchResults.length !== 1 ? 's' : ''} for &ldquo;{searchQuery}&rdquo;
+                </p>
+            )}
 
             {loading ? (
                 <div className="flex flex-col items-center justify-center py-20 gap-4">
@@ -64,17 +119,21 @@ export const Library = () => {
                         Retry
                     </button>
                 </div>
-            ) : courses.length === 0 ? (
+            ) : displayedCourses.length === 0 ? (
                 <div className="text-center py-20">
                     <div className="w-20 h-20 bg-gray-50 rounded-full flex items-center justify-center text-gray-300 mx-auto mb-6">
                         <Book size={40} />
                     </div>
-                    <h3 className="text-xl font-bold text-gray-900 mb-2">No Courses Found</h3>
-                    <p className="text-gray-500 max-w-sm mx-auto">Start by creating your first course to see it here in the library.</p>
+                    <h3 className="text-xl font-bold text-gray-900 mb-2">
+                        {isSearchMode ? 'No courses matched your search' : 'No Courses Found'}
+                    </h3>
+                    <p className="text-gray-500 max-w-sm mx-auto">
+                        {isSearchMode ? 'Try a different keyword.' : 'Start by creating your first course to see it here in the library.'}
+                    </p>
                 </div>
             ) : (
                 <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-x-8 md:gap-y-10">
-                    {courses.map((course, i) => (
+                    {displayedCourses.map((course, i) => (
                         <div
                             key={course.id || i}
                             onClick={() => navigate(`/study/${course.id}`)}
@@ -106,9 +165,13 @@ export const Library = () => {
         </Layout>
     );
 };
+
 export const Programs = () => {
+    const navigate = useNavigate();
     const location = useLocation();
     const [path, setPath] = React.useState<string[]>([]); // Navigation stack
+    const [courses, setCourses] = React.useState<any[]>([]);
+    const [coursesLoading, setCoursesLoading] = React.useState(false);
 
     // Handle initial redirection from Dashboard
     React.useEffect(() => {
@@ -153,6 +216,27 @@ export const Programs = () => {
         }
     ];
 
+    // Fetch courses when we reach a grade level (path.length === 3)
+    React.useEffect(() => {
+        if (path.length === 3) {
+            const fetchGradeCourses = async () => {
+                setCoursesLoading(true);
+                try {
+                    // Mapping currentGrade to the database level (e.g., 'S2', 'P5')
+
+                    const grade = path[2];
+                    const response = await getCoursesByLevel(grade);
+                    setCourses(response.data);
+                } catch (err) {
+                    console.error('Error fetching grade courses:', err);
+                } finally {
+                    setCoursesLoading(false);
+                }
+            };
+            fetchGradeCourses();
+        }
+    }, [path]);
+
     const [profile, setProfile] = React.useState(() => {
         const saved = localStorage.getItem('soma_profile');
         return saved ? JSON.parse(saved) : { name: 'Swetha shankaresh', avatar: '', grade: '' };
@@ -176,9 +260,9 @@ export const Programs = () => {
         // Initialize student progress with courses from this grade
         const studentProgress = {
             email: newProfile.name || 'student',
-            courses: mockCourses.map(course => ({
+            courses: courses.map(course => ({
                 courseId: `${currentGrade}-${course.id}`,
-                courseName: course.name,
+                courseName: course.title,
                 progress: 0,
                 status: 'pending' as const,
                 lastUpdated: new Date().toISOString()
@@ -191,12 +275,6 @@ export const Programs = () => {
         alert(`Successfully enrolled in ${currentGrade}!`);
     };
 
-    const mockCourses = [
-        { id: 1, name: 'Mathematics', teacher: 'Emma Kent', img: 'https://images.unsplash.com/photo-1636466497217-26a8cbeaf0aa?auto=format&fit=crop&q=80&w=400' },
-        { id: 2, name: 'Biology', teacher: 'Gren Harry', img: 'https://images.unsplash.com/photo-1603126857599-f6e157fa2fe6?auto=format&fit=crop&q=80&w=400' },
-        { id: 3, name: 'Physics', teacher: 'Sarah Lex', img: 'https://images.unsplash.com/photo-1636466497217-26a8cbeaf0aa?auto=format&fit=crop&q=80&w=400' },
-        { id: 4, name: 'Chemistry', teacher: 'Hella Anna', img: 'https://images.unsplash.com/photo-1603126857599-f6e157fa2fe6?auto=format&fit=crop&q=80&w=400' },
-    ];
 
     return (
         <Layout title="Programs">
@@ -344,31 +422,46 @@ export const Programs = () => {
             )}
 
             {path.length === 3 && (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                    {mockCourses.map(course => (
-                        <div key={course.id} className="bg-white/40 backdrop-blur-md rounded-3xl p-4 border border-primary/10 hover:shadow-xl transition-all group overflow-hidden relative">
-                            {!isEnrolledInCurrentGrade && (
-                                <div className="absolute inset-0 bg-white/60 backdrop-blur-[2px] z-10 flex flex-col items-center justify-center p-6 text-center">
-                                    <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center text-gray-400 mb-3">
-                                        <Shield size={24} />
-                                    </div>
-                                    <h5 className="font-bold text-gray-900 text-sm mb-1">Locked</h5>
-                                    <p className="text-[10px] text-gray-500">Enroll in {currentGrade} to access this course</p>
-                                </div>
-                            )}
-                            <div className="aspect-video rounded-2xl overflow-hidden mb-4">
-                                <img src={course.img} className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
-                            </div>
-                            <h4 className="font-bold text-gray-900 mb-1">{course.name}</h4>
-                            <p className="text-xs text-gray-400 mb-4">Facilitator: {course.teacher}</p>
-                            <button
-                                disabled={!isEnrolledInCurrentGrade}
-                                className={`w-full py-2 rounded-xl text-xs font-bold transition-colors ${isEnrolledInCurrentGrade ? 'bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white' : 'bg-gray-100 text-gray-400 cursor-not-allowed'}`}
-                            >
-                                Open Course
-                            </button>
+                <div className="flex flex-col gap-6">
+                    {coursesLoading ? (
+                        <div className="flex items-center justify-center py-20">
+                            <div className="w-10 h-10 border-4 border-primary/20 border-t-primary rounded-full animate-spin"></div>
                         </div>
-                    ))}
+                    ) : courses.length === 0 ? (
+                        <div className="text-center py-20 bg-white/40 backdrop-blur-md rounded-3xl border border-dashed border-gray-200">
+                            <Book size={40} className="mx-auto text-gray-300 mb-4" />
+                            <h4 className="font-bold text-gray-900">No Courses Available</h4>
+                            <p className="text-xs text-gray-500">There are no courses currently listed for {currentGrade}.</p>
+                        </div>
+                    ) : (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                            {courses.map(course => (
+                                <div key={course.id} className="bg-white/40 backdrop-blur-md rounded-3xl p-4 border border-primary/10 hover:shadow-xl transition-all group overflow-hidden relative">
+                                    {!isEnrolledInCurrentGrade && (
+                                        <div className="absolute inset-0 bg-white/60 backdrop-blur-[2px] z-10 flex flex-col items-center justify-center p-6 text-center">
+                                            <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center text-gray-400 mb-3">
+                                                <Shield size={24} />
+                                            </div>
+                                            <h5 className="font-bold text-gray-900 text-sm mb-1">Locked</h5>
+                                            <p className="text-[10px] text-gray-500">Enroll in {currentGrade} to access this course</p>
+                                        </div>
+                                    )}
+                                    <div className="aspect-video rounded-2xl overflow-hidden mb-4">
+                                        <img src={course.coverPage || 'https://images.unsplash.com/photo-1636466497217-26a8cbeaf0aa?auto=format&fit=crop&q=80&w=400'} className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
+                                    </div>
+                                    <h4 className="font-bold text-gray-900 mb-1 truncate">{course.title}</h4>
+                                    <p className="text-xs text-gray-400 mb-4">Facilitator: {course.author || 'Anonymous'}</p>
+                                    <button
+                                        disabled={!isEnrolledInCurrentGrade}
+                                        onClick={() => navigate(`/study/${course.id}`)}
+                                        className={`w-full py-2 rounded-xl text-xs font-bold transition-colors ${isEnrolledInCurrentGrade ? 'bg-primary-surface text-primary hover:bg-primary hover:text-white' : 'bg-gray-100 text-gray-400 cursor-not-allowed'}`}
+                                    >
+                                        Open Course
+                                    </button>
+                                </div>
+                            ))}
+                        </div>
+                    )}
                 </div>
             )}
         </Layout>

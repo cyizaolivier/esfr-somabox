@@ -4,6 +4,7 @@ import { useAuth } from '../auth'
 import Sidebar from '../components/Sidebar'
 import { Bell, CheckSquare, MoreHorizontal, ClipboardList, Menu, Activity } from 'lucide-react'
 import { getStudentProgress } from '../api/progress.api'
+import { getAllCourses } from '../api/course.api'
 interface CourseProgress {
   courseId: string;
   courseName: string;
@@ -70,14 +71,25 @@ export default function Dashboard() {
         if (!studentId) {
           throw new Error('No student ID found');
         }
-        const response = await getStudentProgress(studentId);
-        const courses: CourseProgress[] = response.data.map((item: any) => ({
-          courseId: item.courseId,
-          courseName: `Course ${item.courseId.substring(0, 4)}`,
-          progress: item.progress_percentage,
-          status: item.status as 'completed' | 'in-progress' | 'pending',
-          lastUpdated: new Date().toISOString()
-        }));
+
+        // Fetch progress and all courses to get details
+        const [progressRes, coursesRes] = await Promise.all([
+          getStudentProgress(studentId),
+          getAllCourses()
+        ]);
+
+        const allCourses = coursesRes.data;
+        const courses: CourseProgress[] = progressRes.data.map((item: any) => {
+          const courseDetail = allCourses.find((c: any) => c.id === item.courseId);
+          return {
+            courseId: item.courseId,
+            courseName: courseDetail?.title || `Course ${item.courseId.substring(0, 4)}`,
+            courseImage: courseDetail?.coverPage || "https://images.unsplash.com/photo-1456513080510-7bf3a84b82f8?auto=format&fit=crop&q=80&w=400",
+            progress: item.progress_percentage,
+            status: item.status as 'completed' | 'in-progress' | 'pending',
+            lastUpdated: new Date().toISOString()
+          };
+        });
 
         setStudentProgress(prev => ({
           ...prev,
@@ -120,13 +132,13 @@ export default function Dashboard() {
 
   // Get real course data from progress
   const courses = studentProgress.courses
-    .filter(c => c.status === 'in-progress' || c.status === 'completed')
-    .slice(0, 2)
+    .filter(c => c.status === 'in-progress' || c.status === 'completed' || c.status === 'pending')
+    .slice(0, 4) // Show up to 4 real programs
     .map(c => ({
       id: c.courseId,
-      title: c.courseName,
+      title: (c as any).courseName, // Use the real title we mapped
       progress: c.progress,
-      image: "https://images.unsplash.com/photo-1456513080510-7bf3a84b82f8?auto=format&fit=crop&q=80&w=400"
+      image: (c as any).courseImage || "https://images.unsplash.com/photo-1456513080510-7bf3a84b82f8?auto=format&fit=crop&q=80&w=400"
     }));
 
   // Get real progress data
