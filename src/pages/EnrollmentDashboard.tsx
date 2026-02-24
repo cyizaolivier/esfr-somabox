@@ -1,73 +1,68 @@
 import React, { useState, useEffect } from 'react'
 import DashboardLayout from '../components/DashboardLayout'
-import { Search, Filter, BookOpen, Users, School, ChevronDown, MessageCircle, Send } from 'lucide-react'
+import { Search, Filter, School, Users, ChevronDown } from 'lucide-react'
 import { useAuth } from '../auth'
+import { getAllCourses, Course } from '../api/course.api'
 
 export const EnrollmentDashboard = () => {
   const { user } = useAuth()
-  const [filterType, setFilterType] = useState<'courses' | 'schools'>('courses')
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedItem, setSelectedItem] = useState<string | null>(null)
   const [expandedItems, setExpandedItems] = useState<string[]>([])
-  const [showDropdown, setShowDropdown] = useState(false)
-  const [comments, setComments] = useState<any[]>([])
-  const [newComment, setNewComment] = useState('')
+  
+  // Real data from API
+  const [courses, setCourses] = useState<Course[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
-  // Load comments from localStorage
+  // Fetch courses from API
   useEffect(() => {
-    const savedComments = localStorage.getItem('soma_course_comments');
-    if (savedComments) {
-      setComments(JSON.parse(savedComments));
+    const fetchCourses = async () => {
+      try {
+        setLoading(true)
+        const data = await getAllCourses()
+        setCourses(data)
+        setError(null)
+      } catch (err: any) {
+        console.error('Failed to fetch courses:', err)
+        setError('Failed to load courses')
+      } finally {
+        setLoading(false)
+      }
     }
-  }, []);
 
-  // Save comments to localStorage
-  useEffect(() => {
-    localStorage.setItem('soma_course_comments', JSON.stringify(comments));
-  }, [comments]);
+    fetchCourses()
+  }, [])
 
-  const courses = [
-    { id: 'c1', name: 'Advanced React Patterns', students: 240, school: 'Tech Academy' },
-    { id: 'c2', name: 'Fullstack Architecture', students: 180, school: 'Tech Academy' },
-    { id: 'c3', name: 'UI/UX Design Systems', students: 320, school: 'Design Institute' },
-    { id: 'c4', name: 'Data Science Fundamentals', students: 150, school: 'Data Science Hub' },
-    { id: 'c5', name: 'Mobile Development', students: 200, school: 'Tech Academy' },
-  ]
+  // Schools computed from courses (grouped by author/school)
+  const schools = React.useMemo(() => {
+    const schoolMap = new Map<string, { id: string; name: string; students: number; courses: number }>()
+    courses.forEach(course => {
+      const schoolName = course.author || 'Unknown School'
+      const existing = schoolMap.get(schoolName)
+      if (existing) {
+        existing.students += course.students || 0
+        existing.courses += 1
+      } else {
+        schoolMap.set(schoolName, {
+          id: `s_${schoolName}`,
+          name: schoolName,
+          students: course.students || 0,
+          courses: 1
+        })
+      }
+    })
+    return Array.from(schoolMap.values())
+  }, [courses])
 
-  const schools = [
-    { id: 's1', name: 'Tech Academy', students: 620, courses: 5 },
-    { id: 's2', name: 'Design Institute', students: 480, courses: 3 },
-    { id: 's3', name: 'Data Science Hub', students: 350, courses: 2 },
-    { id: 's4', name: 'Business School', students: 290, courses: 4 },
-  ]
-
-  const studentsByCourse = {
-    'c1': [
-      { id: 'st1', name: 'John Doe', email: 'john@example.com', date: '2024-01-15' },
-      { id: 'st2', name: 'Jane Smith', email: 'jane@example.com', date: '2024-01-16' },
-      { id: 'st3', name: 'Mike Johnson', email: 'mike@example.com', date: '2024-01-18' },
-    ],
-    'c2': [
-      { id: 'st4', name: 'Sarah Williams', email: 'sarah@example.com', date: '2024-01-10' },
-      { id: 'st5', name: 'Tom Brown', email: 'tom@example.com', date: '2024-01-12' },
-    ],
-  }
-
-  const studentsBySchool = {
-    's1': [
+  // Mock student data for demo
+  const studentsBySchool: Record<string, { id: string; name: string; email: string; date: string }[]> = {
+    's_Unknown School': [
       { id: 'st1', name: 'John Doe', email: 'john@example.com', date: '2024-01-15' },
       { id: 'st2', name: 'Jane Smith', email: 'jane@example.com', date: '2024-01-16' },
       { id: 'st6', name: 'Alex Chen', email: 'alex@example.com', date: '2024-01-20' },
     ],
-    's2': [
-      { id: 'st3', name: 'Mike Johnson', email: 'mike@example.com', date: '2024-01-18' },
-      { id: 'st7', name: 'Emily Davis', email: 'emily@example.com', date: '2024-01-22' },
-    ],
   }
-
-  const filteredCourses = courses.filter(c => 
-    c.name.toLowerCase().includes(searchTerm.toLowerCase())
-  )
 
   const filteredSchools = schools.filter(s => 
     s.name.toLowerCase().includes(searchTerm.toLowerCase())
@@ -79,72 +74,14 @@ export const EnrollmentDashboard = () => {
     )
   }
 
-  const displayedItems = filterType === 'courses' ? filteredCourses : filteredSchools
-
-  // Comments handling
-  const handleAddComment = () => {
-    if (!newComment.trim() || !selectedItem || filterType !== 'courses' || !user) return;
-
-    const comment = {
-      id: Date.now().toString(),
-      courseId: selectedItem,
-      author: user.email?.split('@')[0] || 'Student',
-      authorEmail: user.email || 'student@example.com',
-      content: newComment,
-      timestamp: new Date().toLocaleString(),
-      replies: []
-    };
-
-    setComments(prev => [...prev, comment]);
-    setNewComment('');
-  };
-
-  const selectedCourseComments = selectedItem && filterType === 'courses' 
-    ? comments.filter((c: any) => c.courseId === selectedItem)
-    : [];
-
   return (
     <DashboardLayout title="Enrollment Dashboard">
       <div className="space-y-8">
-        <div className="relative">
-          <button
-            onClick={() => setShowDropdown(!showDropdown)}
-            className="flex items-center gap-2 px-6 py-3 bg-primary text-white rounded-xl font-bold shadow-lg shadow-primary/20 hover:bg-primary-dark transition-all"
-          >
-            <Filter size={20} />
-            {filterType === 'courses' ? 'Filter by Course' : 'Filter by School'}
-            <ChevronDown size={20} className={`transition-transform ${showDropdown ? 'rotate-180' : ''}`} />
-          </button>
-          
-          {showDropdown && (
-            <div className="absolute top-full mt-2 w-48 bg-white/40 backdrop-blur-md border border-primary/10 rounded-xl shadow-xl z-10 overflow-hidden">
-              <button
-                onClick={() => { setFilterType('courses'); setSelectedItem(null); setSearchTerm(''); setShowDropdown(false); }}
-                className={`w-full flex items-center gap-3 px-4 py-3 text-left transition-colors ${
-                  filterType === 'courses' ? 'bg-primary/10 text-primary' : 'hover:bg-primary/5 text-gray-700'
-                }`}
-              >
-                <BookOpen size={18} />
-                By Course
-              </button>
-              <button
-                onClick={() => { setFilterType('schools'); setSelectedItem(null); setSearchTerm(''); setShowDropdown(false); }}
-                className={`w-full flex items-center gap-3 px-4 py-3 text-left transition-colors ${
-                  filterType === 'schools' ? 'bg-primary/10 text-primary' : 'hover:bg-primary/5 text-gray-700'
-                }`}
-              >
-                <School size={18} />
-                By School
-              </button>
-            </div>
-          )}
-        </div>
-
         <div className="relative max-w-md">
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
           <input
             type="text"
-            placeholder={filterType === 'courses' ? 'Search courses...' : 'Search schools...'}
+            placeholder="Search schools..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="w-full bg-white/40 backdrop-blur-md border border-primary/10 rounded-xl pl-12 pr-4 py-3 outline-none focus:ring-2 focus:ring-primary/20 transition-all"
@@ -154,19 +91,23 @@ export const EnrollmentDashboard = () => {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           <div className="bg-white/40 backdrop-blur-md border border-primary/10 rounded-[2rem] overflow-hidden">
             <div className="p-6 bg-primary/5 border-b border-primary/10">
-              <h2 className="text-xl font-bold text-gray-900">
-                {filterType === 'courses' ? 'All Courses' : 'All Schools'}
-              </h2>
+              <h2 className="text-xl font-bold text-gray-900">All Schools</h2>
               <p className="text-sm text-gray-500 mt-1">
-                {filterType === 'courses' 
-                  ? `${courses.length} courses with ${courses.reduce((acc, c) => acc + c.students, 0)} total enrollments`
-                  : `${schools.length} schools with ${schools.reduce((acc, s) => acc + s.students, 0)} total students`
-                }
+                {schools.length} schools with {schools.reduce((acc, s) => acc + s.students, 0)} total students
               </p>
             </div>
             
             <div className="divide-y divide-primary/5">
-              {displayedItems.length > 0 ? displayedItems.map((item: any) => (
+              {loading ? (
+                <div className="p-8 flex items-center justify-center">
+                  <div className="animate-spin w-6 h-6 border-2 border-primary border-t-transparent rounded-full"></div>
+                  <span className="ml-2 text-gray-500">Loading schools...</span>
+                </div>
+              ) : error ? (
+                <div className="p-8 text-center text-red-500">
+                  {error}
+                </div>
+              ) : filteredSchools.length > 0 ? filteredSchools.map((item: any) => (
                 <div key={item.id}>
                   <button
                     onClick={() => {
@@ -180,20 +121,13 @@ export const EnrollmentDashboard = () => {
                     }`}
                   >
                     <div className="flex items-center gap-4">
-                      <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${
-                        filterType === 'courses' 
-                          ? 'bg-blue-50 text-primary-dark' 
-                          : 'bg-green-50 text-green-600'
-                      }`}>
-                        {filterType === 'courses' ? <BookOpen size={20} /> : <School size={20} />}
+                      <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-green-50 text-green-600">
+                        <School size={20} />
                       </div>
                       <div className="text-left">
                         <h3 className="font-bold text-gray-900">{item.name}</h3>
                         <p className="text-sm text-gray-500">
-                          {filterType === 'courses' 
-                            ? `${item.students} students` 
-                            : `${item.students} students - ${item.courses} courses`
-                          }
+                          {item.students} students - {item.courses} courses
                         </p>
                       </div>
                     </div>
@@ -207,41 +141,23 @@ export const EnrollmentDashboard = () => {
                   
                   {expandedItems.includes(item.id) && selectedItem === item.id && (
                     <div className="bg-primary/5 px-6 py-4 border-t border-primary/10">
-                      <h4 className="text-sm font-bold text-gray-700 mb-3">
-                        {filterType === 'courses' ? 'Enrolled Students' : 'Students in School'}
-                      </h4>
+                      <h4 className="text-sm font-bold text-gray-700 mb-3">Students in School</h4>
                       <div className="space-y-2">
-                        {filterType === 'courses' 
-                          ? (studentsByCourse[item.id] || []).map((student) => (
-                              <div key={student.id} className="flex items-center justify-between bg-white/60 rounded-lg p-3">
-                                <div className="flex items-center gap-3">
-                                  <div className="w-8 h-8 bg-primary rounded-full flex items-center justify-center text-white text-xs font-bold">
-                                    {student.name.charAt(0)}
-                                  </div>
-                                  <div>
-                                    <p className="text-sm font-medium text-gray-900">{student.name}</p>
-                                    <p className="text-xs text-gray-500">{student.email}</p>
-                                  </div>
-                                </div>
-                                <span className="text-xs text-gray-400">{student.date}</span>
+                        {(studentsBySchool[item.id] || []).map((student: any) => (
+                          <div key={student.id} className="flex items-center justify-between bg-white/60 rounded-lg p-3">
+                            <div className="flex items-center gap-3">
+                              <div className="w-8 h-8 bg-primary rounded-full flex items-center justify-center text-white text-xs font-bold">
+                                {student.name.charAt(0)}
                               </div>
-                            ))
-                          : (studentsBySchool[item.id] || []).map((student) => (
-                              <div key={student.id} className="flex items-center justify-between bg-white/60 rounded-lg p-3">
-                                <div className="flex items-center gap-3">
-                                  <div className="w-8 h-8 bg-primary rounded-full flex items-center justify-center text-white text-xs font-bold">
-                                    {student.name.charAt(0)}
-                                  </div>
-                                  <div>
-                                    <p className="text-sm font-medium text-gray-900">{student.name}</p>
-                                    <p className="text-xs text-gray-500">{student.email}</p>
-                                  </div>
-                                </div>
-                                <span className="text-xs text-gray-400">{student.date}</span>
+                              <div>
+                                <p className="text-sm font-medium text-gray-900">{student.name}</p>
+                                <p className="text-xs text-gray-500">{student.email}</p>
                               </div>
-                            ))
-                        }
-                        {(filterType === 'courses' ? studentsByCourse[item.id] : studentsBySchool[item.id])?.length === 0 && (
+                            </div>
+                            <span className="text-xs text-gray-400">{student.date}</span>
+                          </div>
+                        ))}
+                        {(studentsBySchool[item.id] || [])?.length === 0 && (
                           <p className="text-sm text-gray-400 italic">No students found</p>
                         )}
                       </div>
@@ -250,7 +166,7 @@ export const EnrollmentDashboard = () => {
                 </div>
               )) : (
                 <div className="p-8 text-center text-gray-400">
-                  No {filterType === 'courses' ? 'courses' : 'schools'} found
+                  No schools found
                 </div>
               )}
             </div>
@@ -262,40 +178,27 @@ export const EnrollmentDashboard = () => {
                 <div className="bg-white/40 backdrop-blur-md border border-primary/10 rounded-[2rem] p-6">
                   <h3 className="text-lg font-bold text-gray-900 mb-4">Details</h3>
                   {(() => {
-                    const item = displayedItems.find((i: any) => i.id === selectedItem)
+                    const item = filteredSchools.find((i: any) => i.id === selectedItem)
                     if (!item) return null
-                    const isCourse = filterType === 'courses'
                     return (
                       <div className="space-y-4">
                         <div className="flex items-center gap-4">
-                          <div className={`w-12 h-12 rounded-2xl flex items-center justify-center ${
-                            filterType === 'courses' 
-                              ? 'bg-blue-50 text-blue-600' 
-                              : 'bg-green-50 text-green-600'
-                          }`}>
-                            {filterType === 'courses' ? <BookOpen size={24} /> : <School size={24} />}
+                          <div className="w-12 h-12 rounded-2xl flex items-center justify-center bg-green-50 text-green-600">
+                            <School size={24} />
                           </div>
                           <div>
                             <h4 className="font-bold text-gray-900">{item.name}</h4>
-                            <p className="text-sm text-gray-500">
-                              {isCourse ? item.school : item.courses + ' courses'}
-                            </p>
+                            <p className="text-sm text-gray-500">{item.courses} courses</p>
                           </div>
                         </div>
                         <div className="grid grid-cols-2 gap-4 pt-4 border-t border-primary/10">
                           <div className="text-center p-4 bg-primary/5 rounded-xl">
                             <p className="text-2xl font-black text-primary">{item.students}</p>
-                            <p className="text-xs font-bold text-gray-400 uppercase">
-                              {filterType === 'courses' ? 'Students' : 'Total Students'}
-                            </p>
+                            <p className="text-xs font-bold text-gray-400 uppercase">Total Students</p>
                           </div>
                           <div className="text-center p-4 bg-primary/5 rounded-xl">
-                            <p className="text-2xl font-black text-primary">
-                              {isCourse ? '100%' : item.courses}
-                            </p>
-                            <p className="text-xs font-bold text-gray-400 uppercase">
-                              {filterType === 'courses' ? 'Completion' : 'Courses'}
-                            </p>
+                            <p className="text-2xl font-black text-primary">{item.courses}</p>
+                            <p className="text-xs font-bold text-gray-400 uppercase">Courses</p>
                           </div>
                         </div>
                       </div>
@@ -322,70 +225,14 @@ export const EnrollmentDashboard = () => {
                     </div>
                   </div>
                 </div>
-
-                {filterType === 'courses' && selectedItem && (
-                  <div className="bg-white/40 backdrop-blur-md border border-primary/10 rounded-[2rem] p-6">
-                    <div className="flex items-center justify-between mb-4">
-                      <h3 className="text-lg font-bold text-gray-900 flex items-center gap-2">
-                        <MessageCircle size={20} />
-                        Course Comments
-                      </h3>
-                      <span className="text-xs font-bold text-gray-400 bg-primary/10 px-3 py-1 rounded-full">
-                        {selectedCourseComments.length}
-                      </span>
-                    </div>
-
-                    <div className="flex gap-2 mb-4">
-                      <input
-                        type="text"
-                        placeholder="Ask a question or share your thoughts..."
-                        value={newComment}
-                        onChange={(e) => setNewComment(e.target.value)}
-                        onKeyPress={(e) => e.key === 'Enter' && handleAddComment()}
-                        className="flex-1 bg-white/60 border border-primary/10 rounded-lg px-4 py-2 text-sm outline-none focus:ring-2 focus:ring-primary/20"
-                      />
-                      <button
-                        onClick={handleAddComment}
-                        className="px-4 py-2 bg-primary text-white rounded-lg font-bold text-sm hover:bg-primary-dark transition-all flex items-center gap-2"
-                      >
-                        <Send size={14} />
-                      </button>
-                    </div>
-
-                    <div className="space-y-3 max-h-64 overflow-y-auto">
-                      {selectedCourseComments.length > 0 ? (
-                        selectedCourseComments.map((comment: any) => (
-                          <div key={comment.id} className="bg-white/40 rounded-xl p-3">
-                            <div className="flex items-start gap-2">
-                              <div className="w-8 h-8 bg-primary rounded-full flex items-center justify-center text-white font-bold text-xs flex-shrink-0">
-                                {comment.author.charAt(0)}
-                              </div>
-                              <div className="flex-1">
-                                <div className="flex items-center gap-2">
-                                  <span className="font-semibold text-sm text-gray-900">{comment.author}</span>
-                                  <span className="text-xs text-gray-400">{comment.timestamp}</span>
-                                </div>
-                                <p className="text-sm text-gray-700">{comment.content}</p>
-                              </div>
-                            </div>
-                          </div>
-                        ))
-                      ) : (
-                        <p className="text-sm text-gray-400 italic text-center py-4">
-                          No comments yet. Be the first to comment!
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                )}
               </>
             ) : (
               <div className="bg-white/40 backdrop-blur-md border border-primary/10 rounded-[2rem] p-8 text-center">
                 <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
                   <Filter size={32} className="text-primary" />
                 </div>
-                <h3 className="text-lg font-bold text-gray-900 mb-2">Select an Item</h3>
-                <p className="text-gray-500">Choose a {filterType === 'courses' ? 'course' : 'school'} from the list to view details and enrolled students</p>
+                <h3 className="text-lg font-bold text-gray-900 mb-2">Select a School</h3>
+                <p className="text-gray-500">Choose a school from the list to view details and enrolled students</p>
               </div>
             )}
           </div>

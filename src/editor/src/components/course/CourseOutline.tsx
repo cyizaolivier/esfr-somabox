@@ -1,8 +1,8 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
 import { useCourse } from '../../state/CourseContext';
-import { List, Plus, Home, Download, FileJson, Cloud, ArrowLeft } from 'lucide-react';
-import { createCourse } from '../../../../api/course.api';
+import { List, Plus, Home, Download, FileJson, Cloud, ArrowLeft, Users } from 'lucide-react';
+import { createCourse, getCourseById, getCourseStudents } from '../../../../api/course.api';
 import { generateCourseExport } from '../../lib/htmlGenerator';
 import { serializeFullCourse } from '../../lib/serialization';
 import {
@@ -25,7 +25,44 @@ import { SortableTopicItem } from './SortableTopicItem';
 export const CourseOutline: React.FC = () => {
     const { state, dispatch } = useCourse();
     const navigate = useNavigate();
+    const { courseId } = useParams<{ courseId?: string }>();
     const [newTopicTitle, setNewTopicTitle] = useState('');
+    const [loading, setLoading] = useState(false);
+    const [students, setStudents] = useState<any[]>([]);
+    const [showStudents, setShowStudents] = useState(false);
+
+    // Load course data if courseId is provided
+    useEffect(() => {
+        const loadCourse = async () => {
+            if (courseId) {
+                try {
+                    setLoading(true);
+                    const course = await getCourseById(courseId);
+                    // Update context with course metadata
+                    dispatch({ 
+                        type: 'UPDATE_METADATA', 
+                        payload: {
+                            title: course.title,
+                            description: course.description,
+                            level: course.level,
+                            author: course.author,
+                            coverPage: course.coverPage
+                        }
+                    });
+                    dispatch({ type: 'SET_BACKEND_COURSE_ID', payload: course.id });
+                    
+                    // Load students enrolled in this course
+                    const courseStudents = await getCourseStudents(courseId);
+                    setStudents(courseStudents);
+                } catch (error) {
+                    console.error('Failed to load course:', error);
+                } finally {
+                    setLoading(false);
+                }
+            }
+        };
+        loadCourse();
+    }, [courseId, dispatch]);
 
     const sensors = useSensors(
         useSensor(PointerSensor),
@@ -99,8 +136,8 @@ export const CourseOutline: React.FC = () => {
                 author: state.metadata.author,
             };
 
-            const response = await createCourse(courseData);
-            const backendId = response.data.id; // Adjust based on actual API response structure
+            const newCourse = await createCourse(courseData);
+            const backendId = newCourse.id;
 
             dispatch({ type: 'SET_BACKEND_COURSE_ID', payload: backendId });
             alert("Course saved to cloud successfully!");
@@ -174,8 +211,50 @@ export const CourseOutline: React.FC = () => {
                         </div>
                         <h2 className="text-2xl font-bold text-gray-800">Course Outline</h2>
                     </div>
-                    <span className="text-gray-400 font-medium">{state.topics.length} Topics Total</span>
+                    <div className="flex items-center gap-3">
+                        <span className="text-gray-400 font-medium">{state.topics.length} Topics Total</span>
+                        {courseId && (
+                            <button
+                                onClick={() => setShowStudents(!showStudents)}
+                                className="ml-4 px-4 py-2 bg-green-50 text-green-600 rounded-xl font-bold flex items-center gap-2 hover:bg-green-100 transition-all"
+                            >
+                                <Users size={18} />
+                                Students ({students.length})
+                            </button>
+                        )}
+                    </div>
                 </div>
+
+                {/* Students Panel */}
+                {showStudents && (
+                    <div className="mb-8 bg-white rounded-2xl border border-gray-200 overflow-hidden">
+                        <div className="bg-green-50 px-6 py-4 border-b border-green-100">
+                            <h3 className="font-bold text-green-800">Enrolled Students</h3>
+                        </div>
+                        {students.length > 0 ? (
+                            <div className="divide-y divide-gray-100">
+                                {students.map((student: any, index: number) => (
+                                    <div key={index} className="px-6 py-4 flex items-center gap-4">
+                                        <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center text-green-600 font-bold">
+                                            {student.name?.charAt(0) || student.email?.charAt(0) || 'S'}
+                                        </div>
+                                        <div className="flex-1">
+                                            <p className="font-medium text-gray-900">{student.name || 'Student'}</p>
+                                            <p className="text-sm text-gray-500">{student.email}</p>
+                                        </div>
+                                        <span className="px-3 py-1 bg-green-100 text-green-700 text-xs font-bold rounded-full">
+                                            Enrolled
+                                        </span>
+                                    </div>
+                                ))}
+                            </div>
+                        ) : (
+                            <div className="px-6 py-8 text-center text-gray-500">
+                                No students enrolled in this course yet.
+                            </div>
+                        )}
+                    </div>
+                )}
 
                 {/* Add Topic Form */}
                 <form onSubmit={handleAddTopic} className="mb-12 flex gap-3">

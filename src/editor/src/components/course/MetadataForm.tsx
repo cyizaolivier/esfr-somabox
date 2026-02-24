@@ -17,8 +17,8 @@ export const MetadataForm: React.FC = () => {
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         try {
-            const course =await createCourse(formData);
-            const course_id = course.data.id;
+            const course = await createCourse(formData);
+            const course_id = course.id;
             localStorage.setItem('course_id', course_id);
             dispatch({ type: 'UPDATE_METADATA', payload: formData });
             navigate('/facilitator/course-outline');

@@ -25,8 +25,8 @@ export const Library = () => {
         const fetchCourses = async () => {
             try {
                 const response = await getAllCourses();
-                // Assuming response.data is the array based on user's hint
-                setCourses(response.data);
+                // getAllCourses now returns Course[] directly
+                setCourses(response);
             } catch (err) {
                 setError('Failed to load courses');
                 console.error('Error fetching courses:', err);
@@ -185,6 +185,25 @@ export const Programs = () => {
             }))
         };
         localStorage.setItem('soma_student_progress', JSON.stringify(studentProgress));
+
+        // Also save enrollment records for facilitators to see
+        mockCourses.forEach(course => {
+            const enrollmentRecord = {
+                studentId: newProfile.name || `student_${Date.now()}`,
+                studentName: newProfile.name || 'Student',
+                studentEmail: newProfile.email || newProfile.name || '',
+                courseId: `${currentGrade}-${course.id}`,
+                courseName: course.name,
+                enrolledAt: new Date().toISOString()
+            };
+            
+            // Get existing enrollments
+            const savedEnrollments = localStorage.getItem('soma_enrollments');
+            const enrollments = savedEnrollments ? JSON.parse(savedEnrollments) : [];
+            // Add new enrollment
+            enrollments.push(enrollmentRecord);
+            localStorage.setItem('soma_enrollments', JSON.stringify(enrollments));
+        });
 
         // Trigger storage event for Dashboard
         window.dispatchEvent(new Event('storage'));
