@@ -2,7 +2,10 @@ import React, { useState, useEffect } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import DashboardLayout from '../components/DashboardLayout'
 import { useAuth } from '../auth'
-import { BookOpen, Users, TrendingUp, Clock, PlayCircle, Plus, MessageSquare, Send, FileCheck, MessageCircle, Star } from 'lucide-react'
+import { BookOpen, Users, TrendingUp, Clock, PlayCircle, Plus, MessageSquare, Send, FileCheck, MessageCircle, Star, Loader2 } from 'lucide-react'
+import { getMyCourses, Course } from '../api/course.api'
+import { getAllStudents } from '../api/course.api'
+import { getAllProgress } from '../api/progress.api'
 
 // Comment interface
 interface Comment {
@@ -28,19 +31,78 @@ export const FacilitatorDashboard = () => {
   const location = useLocation()
   const navigate = useNavigate()
   const isCoursesView = location.pathname === '/facilitator/courses'
-  const [view, setView] = useState<'stats' | 'studentList' | 'messages' | 'comments'>('stats')
+  const [view, setView] = useState<'stats' | 'studentList' | 'messages' | 'comments' | 'courseStudents'>('stats')
+  const [selectedCourseForStudents, setSelectedCourseForStudents] = useState<{id: string, title: string} | null>(null)
 
   const [studentCount, setStudentCount] = useState(0)
   const [comments, setComments] = useState<Comment[]>([])
   const [selectedCourseId, setSelectedCourseId] = useState<string | null>(null)
   const [newReply, setNewReply] = useState('')
+  const [myCourses, setMyCourses] = useState<Course[]>([])
+  const [loading, setLoading] = useState(true)
+  const [progressData, setProgressData] = useState<any[]>([])
+
+  // Fetch facilitator's courses
+  useEffect(() => {
+    const fetchMyCourses = async () => {
+      try {
+        setLoading(true)
+        const courses = await getMyCourses()
+        setMyCourses(courses)
+      } catch (err) {
+        console.error('Failed to fetch courses:', err)
+        setMyCourses([])
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    if (user?.email) {
+      fetchMyCourses()
+    } else {
+      setLoading(false)
+    }
+  }, [user, location.pathname])
 
   useEffect(() => {
-    const savedUsers = localStorage.getItem('soma_users');
-    if (savedUsers) {
-      const users = JSON.parse(savedUsers);
-      setStudentCount(users.filter((u: any) => u.role === 'Student').length);
+    const loadStudentCount = async () => {
+      try {
+        // Try to get students from API first
+        const apiStudents = await getAllStudents()
+        if (apiStudents && apiStudents.length > 0) {
+          setStudentCount(apiStudents.length)
+        } else {
+          // Fallback to localStorage
+          const savedUsers = localStorage.getItem('soma_users');
+          if (savedUsers) {
+            const users = JSON.parse(savedUsers);
+            setStudentCount(users.filter((u: any) => u.role === 'Student').length);
+          }
+        }
+      } catch (error) {
+        console.error('Failed to load students from API:', error)
+        // Fallback to localStorage
+        const savedUsers = localStorage.getItem('soma_users');
+        if (savedUsers) {
+          const users = JSON.parse(savedUsers);
+          setStudentCount(users.filter((u: any) => u.role === 'Student').length);
+        }
+      }
     }
+
+    const loadProgress = async () => {
+      try {
+        const progress = await getAllProgress()
+        if (progress) {
+          setProgressData(progress)
+        }
+      } catch (error) {
+        console.error('Failed to load progress:', error)
+      }
+    }
+
+    loadStudentCount()
+    loadProgress()
 
     // Load comments from localStorage
     const savedComments = localStorage.getItem('soma_course_comments');
@@ -54,17 +116,27 @@ export const FacilitatorDashboard = () => {
     localStorage.setItem('soma_course_comments', JSON.stringify(comments));
   }, [comments]);
 
-  const stats = [
-    { label: 'Total Courses', value: '0', icon: BookOpen, color: 'bg-primary-surface text-primary' },
-    { label: 'Total Students', value: studentCount.toLocaleString(), icon: Users, color: 'bg-green-50 text-green-600' },
-    { label: 'Active Enrollments', value: '0', icon: TrendingUp, color: 'bg-purple-50 text-purple-600' },
-    { label: 'Completion Rate', value: '0%', icon: FileCheck, color: 'bg-orange-50 text-orange-600' },
-  ]
+  // Calculate completion rate from progress data
+  const completionRate = React.useMemo(() => {
+    if (progressData.length === 0) return 0;
+    let totalProgress = 0;
+    let count = 0;
+    progressData.forEach((student: any) => {
+      if (student.courses) {
+        student.courses.forEach((course: any) => {
+          totalProgress += course.progress || 0;
+          count++;
+        });
+      }
+    });
+    return count > 0 ? Math.round(totalProgress / count) : 0;
+  }, [progressData]);
 
-  const myCourses = [
-    { id: 'c1', title: 'Advanced React Patterns', students: '240', progress: 85, image: 'https://images.unsplash.com/photo-1633356122544-f134324a6cee?auto=format&fit=crop&q=80&w=400' },
-    { id: 'c2', title: 'Fullstack Architecture', students: '180', progress: 70, image: 'https://images.unsplash.com/photo-1498050108023-c5249f4df085?auto=format&fit=crop&q=80&w=400' },
-    { id: 'c3', title: 'UI/UX Design Systems', students: '320', progress: 95, image: 'https://images.unsplash.com/photo-1586717791821-3f44a563fa4c?w=600&auto=format&fit=crop&q=60&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8M3x8VUklMkZVWCUyMERlc2lnbnxlbnwwfHwwfHx8MA%3D%3D' },
+  const stats = [
+    { label: 'Total Courses', value: myCourses.length.toString(), icon: BookOpen, color: 'bg-primary-surface text-primary' },
+    { label: 'Total Students', value: studentCount.toLocaleString(), icon: Users, color: 'bg-green-50 text-green-600' },
+    { label: 'Active Enrollments', value: myCourses.reduce((acc, c) => acc + (c.students || 0), 0).toString(), icon: TrendingUp, color: 'bg-purple-50 text-purple-600' },
+    { label: 'Completion Rate', value: `${completionRate}%`, icon: FileCheck, color: 'bg-orange-50 text-orange-600' },
   ]
 
   const recentMessages = [
@@ -72,6 +144,15 @@ export const FacilitatorDashboard = () => {
     { id: 2, sender: 'Jane Smith', subject: 'Quiz Question', preview: 'Can you clarify the answer...', time: '5 hours ago', unread: false },
     { id: 3, sender: 'Mike Johnson', subject: 'Module Completion', preview: 'I have completed the module...', time: '1 day ago', unread: false },
   ]
+
+  // Format courses for display
+  const formattedCourses = myCourses.map(course => ({
+    id: course.id,
+    title: course.title,
+    students: course.students?.toString() || '0',
+    progress: 0,
+    image: course.coverPage || 'https://images.unsplash.com/photo-1633356122544-f134324a6cee?auto=format&fit=crop&q=80&w=400'
+  }))
 
   const StudentList = () => {
     const savedUsers = localStorage.getItem('soma_users');
@@ -203,23 +284,35 @@ export const FacilitatorDashboard = () => {
         {/* Course Selector */}
         <div className="bg-white/40 backdrop-blur-md border border-primary/10 rounded-[2rem] p-6">
           <h3 className="font-bold text-gray-900 mb-4">Select a Course</h3>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            {myCourses.map((course) => (
-              <button
-                key={course.id}
-                onClick={() => setSelectedCourseId(course.id)}
-                className={`p-4 rounded-xl border transition-all ${selectedCourseId === course.id
-                  ? 'bg-primary text-white border-primary'
-                  : 'bg-white/40 border-primary/10 hover:border-primary/30'
-                  }`}
-              >
-                <p className="font-bold text-sm truncate">{course.title}</p>
-                <p className={`text-xs mt-1 ${selectedCourseId === course.id ? 'text-white/70' : 'text-gray-500'}`}>
-                  {comments.filter(c => c.courseId === course.id).length} comments
-                </p>
-              </button>
-            ))}
-          </div>
+          {loading ? (
+            <div className="flex items-center justify-center py-8">
+              <Loader2 className="animate-spin text-primary" size={24} />
+              <span className="ml-2 text-gray-500">Loading courses...</span>
+            </div>
+          ) : formattedCourses.length === 0 ? (
+            <div className="text-center py-8 text-gray-500">
+              <BookOpen size={32} className="mx-auto mb-2 opacity-50" />
+              <p>No courses yet. Create your first course to get started.</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              {formattedCourses.map((course) => (
+                <button
+                  key={course.id}
+                  onClick={() => setSelectedCourseId(course.id)}
+                  className={`p-4 rounded-xl border transition-all ${selectedCourseId === course.id
+                    ? 'bg-primary text-white border-primary'
+                    : 'bg-white/40 border-primary/10 hover:border-primary/30'
+                    }`}
+                >
+                  <p className="font-bold text-sm truncate">{course.title}</p>
+                  <p className={`text-xs mt-1 ${selectedCourseId === course.id ? 'text-white/70' : 'text-gray-500'}`}>
+                    {comments.filter(c => c.courseId === course.id).length} comments
+                  </p>
+                </button>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Comments List */}
@@ -227,7 +320,7 @@ export const FacilitatorDashboard = () => {
           <div className="bg-white/40 backdrop-blur-md border border-primary/10 rounded-[2rem] overflow-hidden">
             <div className="p-6 bg-primary/5 border-b border-primary/10">
               <h3 className="font-bold text-gray-900">
-                {myCourses.find(c => c.id === selectedCourseId)?.title} - Comments
+                {formattedCourses.find(c => c.id === selectedCourseId)?.title || 'Course'} - Comments
               </h3>
             </div>
 
@@ -301,7 +394,99 @@ export const FacilitatorDashboard = () => {
   }
 
   // Get total comment count
-  const totalComments = comments.length;
+  const totalComments = comments.length
+  
+  // Get students enrolled in a specific course
+  const getStudentsForCourse = (courseId: string) => {
+    const savedEnrollments = localStorage.getItem('soma_enrollments');
+    const savedUsers = localStorage.getItem('soma_users');
+    
+    if (savedEnrollments) {
+      const enrollments = JSON.parse(savedEnrollments);
+      const courseEnrollments = enrollments.filter((e: any) => e.courseId === courseId);
+      
+      if (savedUsers) {
+        const users = JSON.parse(savedUsers);
+        return courseEnrollments.map((e: any) => {
+          const user = users.find((u: any) => u.id === e.studentId || u.email === e.studentEmail);
+          return {
+            id: e.studentId,
+            name: e.studentName || user?.name || e.studentEmail?.split('@')[0] || 'Student',
+            email: e.studentEmail || user?.email || '',
+            enrolledAt: e.enrolledAt || e.createdAt || new Date().toISOString()
+          };
+        });
+      }
+      return courseEnrollments.map((e: any) => ({
+        id: e.studentId,
+        name: e.studentName || 'Student',
+        email: e.studentEmail || '',
+        enrolledAt: e.enrolledAt || e.createdAt || new Date().toISOString()
+      }));
+    }
+    return [];
+  };
+
+  // Course Students View Component
+  const CourseStudentsView = () => {
+    const courseStudents = selectedCourseForStudents ? getStudentsForCourse(selectedCourseForStudents.id) : [];
+    
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-2xl font-bold text-gray-900">Students in Course</h2>
+            <p className="text-gray-500 mt-1">{selectedCourseForStudents?.title}</p>
+          </div>
+          <button
+            onClick={() => { setView('stats'); setSelectedCourseForStudents(null); }}
+            className="text-primary font-bold text-sm hover:underline"
+          >
+            Back to Overview
+          </button>
+        </div>
+
+        <div className="bg-white/40 backdrop-blur-md border border-primary/10 rounded-[2rem] overflow-hidden">
+          {courseStudents.length > 0 ? (
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="bg-primary/5">
+                  <th className="px-6 py-4 text-xs font-bold text-primary uppercase tracking-wider">Student Name</th>
+                  <th className="px-6 py-4 text-xs font-bold text-primary uppercase tracking-wider">Email</th>
+                  <th className="px-6 py-4 text-xs font-bold text-primary uppercase tracking-wider">Enrolled Date</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-primary/5">
+                {courseStudents.map((student: any, i: number) => (
+                  <tr key={i} className="hover:bg-primary/5 transition-colors">
+                    <td className="px-6 py-4 text-sm font-medium text-gray-900">{student.name}</td>
+                    <td className="px-6 py-4 text-sm text-gray-600">{student.email}</td>
+                    <td className="px-6 py-4 text-sm text-gray-500">{new Date(student.enrolledAt).toLocaleDateString()}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          ) : (
+            <div className="px-6 py-20 text-center text-gray-400 font-bold italic">
+              No students enrolled in this course yet
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  };
+
+  // Navigate to course outline when clicking on a course
+  const handleCourseClick = (courseId: string) => {
+    navigate(`/facilitator/course-outline/${courseId}`)
+  }
+
+  // Handle clicking on student count to see students
+  const handleStudentCountClick = (course: {id: string, title: string}, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setSelectedCourseForStudents(course);
+    setView('courseStudents');
+  }
 
   return (
     <DashboardLayout title={isCoursesView ? "My Courses" : "Facilitator Dashboard"}>
@@ -312,12 +497,11 @@ export const FacilitatorDashboard = () => {
               <div
                 key={i}
                 onClick={() => {
-                  if (stat.label === 'Total Students') setView('studentList');
-                  if (stat.label === 'Active Enrollments') setView('studentList');
+                  if (stat.label === 'Total Courses') navigate('/facilitator/courses');
                 }}
-                className={`p-6 bg-white/40 backdrop-blur-md border border-primary/10 rounded-[2rem] shadow-sm hover:shadow-md transition-all ${['Total Students', 'Active Enrollments'].includes(stat.label) ? 'cursor-pointer group' : ''}`}
+                className={`p-6 bg-white/40 backdrop-blur-md border border-primary/10 rounded-[2rem] shadow-sm hover:shadow-md transition-all ${stat.label === 'Total Courses' ? 'cursor-pointer group' : ''}`}
               >
-                <div className={`w-12 h-12 ${stat.color} rounded-2xl flex items-center justify-center mb-4 ${['Total Students', 'Active Enrollments'].includes(stat.label) ? 'group-hover:scale-110 transition-transform' : ''}`}>
+                <div className={`w-12 h-12 ${stat.color} rounded-2xl flex items-center justify-center mb-4 ${stat.label === 'Total Courses' ? 'group-hover:scale-110 transition-transform' : ''}`}>
                   <stat.icon size={24} />
                 </div>
                 <div className="text-sm font-bold text-gray-400">{stat.label}</div>
@@ -327,10 +511,9 @@ export const FacilitatorDashboard = () => {
 
             {/* Comments Card */}
             <div
-              onClick={() => setView('comments')}
-              className="p-6 bg-white/40 backdrop-blur-md border border-primary/10 rounded-[2rem] shadow-sm hover:shadow-md transition-all cursor-pointer group"
+              className="p-6 bg-white/40 backdrop-blur-md border border-primary/10 rounded-[2rem] shadow-sm hover:shadow-md transition-all"
             >
-              <div className="w-12 h-12 bg-purple-50 text-purple-600 rounded-2xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+              <div className="w-12 h-12 bg-purple-50 text-purple-600 rounded-2xl flex items-center justify-center mb-4">
                 <MessageCircle size={24} />
               </div>
               <div className="text-sm font-bold text-gray-400">Course Comments</div>
@@ -422,12 +605,13 @@ export const FacilitatorDashboard = () => {
         {!isCoursesView && view === 'studentList' && <StudentList />}
         {!isCoursesView && view === 'messages' && <RecentMessages />}
         {!isCoursesView && view === 'comments' && <CourseComments />}
+        {view === 'courseStudents' && <CourseStudentsView />}
 
         {/* Courses Section */}
         <div className="space-y-6">
           <div className="flex items-center justify-between">
             <h2 className="text-2xl font-bold text-gray-900">
-              {isCoursesView ? "All Created Courses" : "Manage Recent Courses"}
+              {isCoursesView ? "All Created Courses" : "Recent Courses"}
             </h2>
             <div className="flex items-center gap-4">
               {isCoursesView && (
@@ -446,32 +630,60 @@ export const FacilitatorDashboard = () => {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {myCourses.map((course) => (
-              <div key={course.id} className="group cursor-pointer">
-                <div className="relative aspect-video rounded-[2rem] overflow-hidden mb-4 shadow-sm group-hover:shadow-xl transition-all duration-500">
-                  <img src={course.image} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" alt={course.title} />
-                  <div className="absolute inset-0 bg-black/20 group-hover:bg-black/40 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
-                    <div className="w-12 h-12 bg-primary-surface rounded-full flex items-center justify-center text-primary shadow-lg transform scale-50 group-hover:scale-100 transition-transform">
-                      <PlayCircle size={24} />
-                    </div>
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <h3 className="font-bold text-gray-900 truncate">{course.title}</h3>
-                  <div className="flex items-center gap-4 text-sm text-gray-500">
-                    <span className="flex items-center gap-1"><Users size={14} /> {course.students} students</span>
-                  </div>
-                  <div className="space-y-1">
-                    <div className="flex items-center gap-3">
-                      <div className="flex-1 h-1.5 bg-gray-100 rounded-full overflow-hidden">
-                        <div className="h-full bg-primary rounded-full" style={{ width: `${course.progress}%` }}></div>
-                      </div>
-                      <span className="text-[10px] font-extrabold text-primary">{course.progress}%</span>
-                    </div>
-                  </div>
-                </div>
+            {loading ? (
+              <div className="col-span-full flex items-center justify-center py-12">
+                <Loader2 className="animate-spin text-primary" size={32} />
+                <span className="ml-3 text-gray-500">Loading your courses...</span>
               </div>
-            ))}
+            ) : formattedCourses.length === 0 ? (
+              <div className="col-span-full text-center py-12">
+                <BookOpen size={48} className="mx-auto mb-4 text-gray-300" />
+                <h3 className="text-lg font-bold text-gray-700 mb-2">No Courses Yet</h3>
+                <p className="text-gray-500 mb-4">You haven't created any courses yet. Create your first course to get started.</p>
+                <button 
+                 onClick={() => navigate('/facilitator/create-course')}
+                className="px-6 py-3 bg-primary text-white rounded-xl font-bold hover:bg-primary-dark transition-all">
+                  Create Your First Course
+                </button>
+              </div>
+            ) : (
+              formattedCourses.map((course) => (
+                <div 
+                  key={course.id} 
+                  className="group cursor-pointer"
+                  onClick={() => handleCourseClick(course.id)}
+                >
+                  <div className="relative aspect-video rounded-[2rem] overflow-hidden mb-4 shadow-sm group-hover:shadow-xl transition-all duration-500">
+                    <img src={course.image} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" alt={course.title} />
+                    <div className="absolute inset-0 bg-black/20 group-hover:bg-black/40 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
+                      <div className="w-12 h-12 bg-primary-surface rounded-full flex items-center justify-center text-primary shadow-lg transform scale-50 group-hover:scale-100 transition-transform">
+                        <PlayCircle size={24} />
+                      </div>
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <h3 className="font-bold text-gray-900 truncate">{course.title}</h3>
+                    <div className="flex items-center gap-4 text-sm text-gray-500">
+                      <button 
+                        onClick={(e) => handleStudentCountClick({id: course.id, title: course.title}, e)}
+                        className="flex items-center gap-1 hover:text-primary transition-colors"
+                      >
+                        <Users size={14} /> 
+                        <span>{course.students} students</span>
+                      </button>
+                    </div>
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-3">
+                        <div className="flex-1 h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                          <div className="h-full bg-primary rounded-full" style={{ width: `${course.progress}%` }}></div>
+                        </div>
+                        <span className="text-[10px] font-extrabold text-primary">{course.progress}%</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))
+            )}
           </div>
         </div>
       </div>
