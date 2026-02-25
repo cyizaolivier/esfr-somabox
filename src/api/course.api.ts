@@ -186,7 +186,7 @@ export const getMyCourses = async (): Promise<Course[]> => {
         return response.data;
     } catch (error) {
         console.error('Error fetching my courses, falling back to all courses:', error);
-        // Fallback: return all courses if API fails
+        // Fallback: return
         const allCourses = await getAllCourses();
         return allCourses;
     }
