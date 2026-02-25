@@ -328,7 +328,7 @@ export default function SignUp() {
           </div>
         </div>
 
-        {/* Right Column - Form */}
+       
         <div className="w-full lg:w-1/2 flex items-center justify-center p-8 bg-primary-surface overflow-y-auto">
           <div className="max-w-md w-full py-8">
             <div className="mb-8 text-center lg:text-left">
