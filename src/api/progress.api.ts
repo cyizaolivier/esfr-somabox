@@ -26,6 +26,12 @@ export const getCourseTopicProgress = async (courseId: string) => {
     return response;
 }
 
+// Mark an entire course as completed — called when student finishes the last topic
+export const completeCourse = async (courseId: string) => {
+    const response = await api.patch(`/progress/course/${courseId}/complete`);
+    return response;
+}
+
 // Create or update progress (upsert by studentId + courseId + topicId)
 export const saveProgress = async (progressData: {
     studentId: string;

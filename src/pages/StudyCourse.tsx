@@ -28,10 +28,9 @@ const StudyCourse: React.FC = () => {
             try {
                 const [topicsRes, progressRes] = await Promise.all([
                     getTopicsByCourseId(courseId),
-                    getCourseTopicProgress(courseId)
+                    getCourseTopicProgress(courseId).catch(() => ({ data: [] })) // safe fallback for first-time students
                 ]);
                 setTopics(topicsRes.data);
-                // Backend returns array: [{ topicId, status }]
                 setTopicProgress(progressRes.data ?? []);
             } catch (err) {
                 console.error('Error fetching course data:', err);
@@ -44,6 +43,22 @@ const StudyCourse: React.FC = () => {
         fetchData();
     }, [courseId]);
 
+    // Re-fetch progress when the student returns to this tab/page after studying a topic.
+    // Without this, status badges stay stale from the initial page load.
+    useEffect(() => {
+        if (!courseId) return;
+        const handleFocus = async () => {
+            try {
+                const progressRes = await getCourseTopicProgress(courseId);
+                setTopicProgress(progressRes.data ?? []);
+            } catch {
+                // Silently ignore refresh failures
+            }
+        };
+        window.addEventListener('focus', handleFocus);
+        return () => window.removeEventListener('focus', handleFocus);
+    }, [courseId]);
+
     // Look up per-topic status from the dedicated topic progress list
     const getTopicStatus = (topicId: string): 'not_started' | 'in-progress' | 'completed' => {
         const entry = topicProgress.find(p => p.topicId === topicId);
@@ -54,11 +69,11 @@ const StudyCourse: React.FC = () => {
         <DashboardLayout title="Study Course">
             <div className="max-w-5xl mx-auto px-4 py-8">
                 <button
-                    onClick={() => navigate('/library')}
+                    onClick={() => navigate(-1)}
                     className="flex items-center gap-2 text-gray-500 hover:text-primary font-bold mb-8 transition-colors border-none bg-transparent cursor-pointer"
                 >
                     <ArrowLeft size={20} />
-                    Back to Library
+                    Back
                 </button>
 
                 {loading ? (
@@ -84,7 +99,7 @@ const StudyCourse: React.FC = () => {
                         <h2 className="text-2xl font-black text-gray-900 mb-3">No topics found yet</h2>
                         <p className="text-gray-500 max-w-sm mx-auto mb-8">This course hasn't been populated with topics yet. Check back later!</p>
                         <button
-                            onClick={() => navigate('/library')}
+                            onClick={() => navigate(-1)}
                             className="px-8 py-3 bg-primary text-white rounded-2xl font-bold hover:bg-primary-dark transition-all shadow-lg active:scale-95"
                         >
                             Explore Other Courses
