@@ -47,7 +47,10 @@ export const mockGenerateQuiz = async (text: string) => {
  */
 export const generateRealQuiz = async (text: string) => {
     try {
-        const response = await fetch('http://localhost:3005/api/quizzes/generate', {
+        // Use the same IP/Port as the standard API
+        const BACKEND_URL = "192.168.1.86:3000";
+
+        const response = await fetch(`http://${BACKEND_URL}/api/quizzes/generate`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -61,21 +64,28 @@ export const generateRealQuiz = async (text: string) => {
 
         const data = await response.json();
 
-        // The backend returns an array of { question, answer }
-        // We need to map this to the frontend format which expects { questions: [...] }
-        // where each question has options and a correct index.
+        // The backend returns an array of { question, answer, distractors }
         if (Array.isArray(data)) {
-            const transformedQuestions = data.map((item, index) => ({
-                id: `ai-${Date.now()}-${index}`,
-                question: item.question,
-                options: [
-                    item.answer, // Correct answer as first option
-                    "Option B",   // Placeholder distractors
-                    "Option C",
-                    "Option D"
-                ],
-                correct: 0
-            }));
+            const transformedQuestions = data.map((item, index) => {
+                // Combine answer and distractors, then shuffle
+                const allOptions = [item.answer, ...(item.distractors || [])];
+
+                // Simple Fisher-Yates shuffle
+                for (let i = allOptions.length - 1; i > 0; i--) {
+                    const j = Math.floor(Math.random() * (i + 1));
+                    [allOptions[i], allOptions[j]] = [allOptions[j], allOptions[i]];
+                }
+
+                // Find the index of the correct answer after shuffling
+                const correctIndex = allOptions.indexOf(item.answer);
+
+                return {
+                    id: `ai-${Date.now()}-${index}`,
+                    question: item.question,
+                    options: allOptions,
+                    correct: correctIndex
+                };
+            });
             return { questions: transformedQuestions };
         }
 
