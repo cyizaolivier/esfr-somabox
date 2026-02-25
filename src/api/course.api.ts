@@ -33,13 +33,8 @@ export const createCourse = async (courseData: {
     coverPage: string;
     level: string;
     author: string;
-}): Promise<Course> => {
-    // Create course object first for localStorage
-    const newCourse: Course = {
-        id: `course_${Date.now()}`,
-        ...courseData,
-        facilitators: []
-    };
+}): Promise<Course> => {  const newCourse: Course = { id: `course_${Date.now()}`, ...courseData,
+        facilitators: [] };
     
     try {
         const response = await api.post('/courses', courseData);
@@ -64,6 +59,12 @@ export const createCourse = async (courseData: {
 export const getAllCourses = async (): Promise<Course[]> => {
     try {
         const response = await api.get<Course[]>('/courses');
+        
+        // Save to localStorage as backup
+        if (response.data && response.data.length > 0) {
+            localStorage.setItem('soma_courses', JSON.stringify(response.data));
+        }
+        
         return response.data;
     } catch (error) {
         // Fallback: get from localStorage
@@ -120,8 +121,12 @@ export const updateCourse = async (courseId: string, courseData: Partial<{
 // Delete a course by ID
 export const deleteCourse = async (courseId: string): Promise<void> => {
     try {
-        await api.delete<void>(`/courses/${courseId}`);
-    } catch (error) {
+        const response = await api.delete<void>(`/courses/${courseId}`);
+        console.log('Course deleted from API:', response.data);
+    } catch (error: any) {
+        // Log the error for debugging
+        console.error('API delete error:', error.response?.data || error.message);
+        
         // Fallback: delete from localStorage
         console.warn('API delete failed, using localStorage fallback');
         const savedCourses = localStorage.getItem('soma_courses');
@@ -129,6 +134,7 @@ export const deleteCourse = async (courseId: string): Promise<void> => {
             const courses: Course[] = JSON.parse(savedCourses);
             const filteredCourses = courses.filter(c => c.id !== courseId);
             localStorage.setItem('soma_courses', JSON.stringify(filteredCourses));
+            console.log('Course deleted from localStorage');
         }
     }
 }

@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useCourse } from '../../state/CourseContext';
-import { List, Plus, Home, Download, FileJson, Cloud, ArrowLeft, Users } from 'lucide-react';
-import { createCourse, getCourseById, getCourseStudents } from '../../../../api/course.api';
+import { List, Plus, Home, Download, FileJson, Cloud, ArrowLeft, Users, Trash2 } from 'lucide-react';
+import { createCourse, getCourseById, getCourseStudents, deleteCourse, getAllCourses } from '../../../../api/course.api';
 import { generateCourseExport } from '../../lib/htmlGenerator';
 import { serializeFullCourse } from '../../lib/serialization';
 import {
@@ -109,6 +109,87 @@ export const CourseOutline: React.FC = () => {
         URL.revokeObjectURL(url);
     };
 
+    const handleDelete = async () => {
+        if (!courseId) {
+            alert('No course ID found. Course may not be saved yet.');
+            return;
+        }
+        
+        const confirmDelete = window.confirm(`Are you sure you want to delete this course? This will delete course ID: ${courseId}`);
+        if (!confirmDelete) return;
+
+        try {
+            setLoading(true);
+            
+            // First, sync courses from API to localStorage (in case they aren't there)
+            try {
+                const allCourses = await getAllCourses();
+                console.log('Synced courses to localStorage:', allCourses.length);
+            } catch (syncError) {
+                console.log('Could not sync courses:', syncError);
+            }
+            
+            // Debug: Check what's in localStorage before delete
+            console.log('=== DELETE DEBUG ===');
+            console.log('Course ID to delete:', courseId);
+            const savedCoursesBefore = localStorage.getItem('soma_courses');
+            console.log('Courses in localStorage before:', savedCoursesBefore ? JSON.parse(savedCoursesBefore) : 'No courses found');
+            
+            // Try API delete first
+            let apiDeleted = false;
+            try {
+                await deleteCourse(courseId);
+                console.log('API delete called');
+                apiDeleted = true;
+            } catch (apiError: any) {
+                console.log('API delete failed:', apiError.message);
+            }
+            
+            // Always try to delete from localStorage directly
+            const savedCourses = localStorage.getItem('soma_courses');
+            if (savedCourses) {
+                const courses = JSON.parse(savedCourses);
+                const courseExists = courses.find((c: any) => c.id === courseId);
+                console.log('Course exists in localStorage:', !!courseExists);
+                
+                const filteredCourses = courses.filter((c: any) => c.id !== courseId);
+                localStorage.setItem('soma_courses', JSON.stringify(filteredCourses));
+                console.log('Deleted from localStorage. Remaining courses:', filteredCourses.length);
+            } else {
+                console.log('No courses in localStorage - cannot delete from localStorage');
+            }
+            
+            // Also remove enrollments for this course
+            const savedEnrollments = localStorage.getItem('soma_enrollments');
+            if (savedEnrollments) {
+                const enrollments = JSON.parse(savedEnrollments);
+                const filteredEnrollments = enrollments.filter((e: any) => e.courseId !== courseId);
+                localStorage.setItem('soma_enrollments', JSON.stringify(filteredEnrollments));
+            }
+            
+            // Verify deletion
+            const savedCoursesAfter = localStorage.getItem('soma_courses');
+            const coursesAfter = savedCoursesAfter ? JSON.parse(savedCoursesAfter) : [];
+            const courseStillExists = coursesAfter.find((c: any) => c.id === courseId);
+            
+            console.log('Course still exists after delete:', !!courseStillExists);
+            console.log('===================');
+            
+            if (courseStillExists && !apiDeleted) {
+                alert('Warning: Course may not have been fully deleted. Check console for details.');
+            } else {
+                alert('Course deleted successfully!');
+            }
+            
+            // Force a full page navigation to ensure fresh data
+            window.location.href = '/facilitator/courses';
+        } catch (error: any) {
+            console.error('Failed to delete course:', error);
+            alert('Failed to delete course: ' + (error.message || 'Unknown error'));
+            setLoading(false);
+        }
+    };
+
     const handleSaveJSON = () => {
         const serialized = serializeFullCourse(state);
         const json = JSON.stringify(serialized, null, 2);
@@ -200,6 +281,15 @@ export const CourseOutline: React.FC = () => {
                         <Download size={18} />
                         Export HTML
                     </button>
+                    {courseId && (
+                        <button
+                            onClick={handleDelete}
+                            className="flex items-center gap-2 px-6 py-2.5 bg-red-50 text-red-600 rounded-xl font-bold hover:bg-red-100 transition-all border-none cursor-pointer active:scale-95"
+                        >
+                            <Trash2 size={18} />
+                            Delete
+                        </button>
+                    )}
                 </div>
             </header>
 

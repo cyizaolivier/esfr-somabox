@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react'
 import DashboardLayout from '../components/DashboardLayout'
-import { TrendingUp, Search, BookOpen, Users, CheckCircle, Clock, AlertCircle } from 'lucide-react'
+import { TrendingUp, Search, BookOpen, Users, CheckCircle } from 'lucide-react'
 import { getAllProgress } from '../api/progress.api'
-import { getAllCourses } from '../api/course.api'
+import { getAllCourses, getMyCourses } from '../api/course.api'
 
 interface StudentProgress {
+  studentId: string
   email: string
+  name: string
   courses: {
     courseId: string
     courseName: string
@@ -27,13 +29,63 @@ export const FacilitatorProgress = () => {
       try {
         setLoading(true)
         
-        // Load progress data
-        const progress = await getAllProgress()
-        setProgressData(progress || [])
+        // Load facilitator's courses first
+        let facilitatorCourseIds: string[] = []
+        try {
+          const myCoursesData = await getMyCourses()
+          setCourses(myCoursesData || [])
+          facilitatorCourseIds = (myCoursesData || []).map((c: any) => c.id)
+        } catch (err) {
+          console.error('Failed to fetch courses:', err)
+          const allCoursesData = await getAllCourses()
+          setCourses(allCoursesData || [])
+          facilitatorCourseIds = (allCoursesData || []).map((c: any) => c.id)
+        }
         
-        // Load courses
-        const coursesData = await getAllCourses()
-        setCourses(coursesData || [])
+        // Load progress data using new API
+        const progress = await getAllProgress()
+        
+        // Get students from localStorage to get email/name
+        const savedUsers = localStorage.getItem('soma_users')
+        const students = savedUsers ? JSON.parse(savedUsers) : []
+        
+        // Group progress by student and filter by facilitator's courses
+        const progressMap = new Map()
+        
+        if (progress && progress.length > 0 && facilitatorCourseIds.length > 0) {
+          progress.forEach((p: any) => {
+            // Only include courses that belong to this facilitator
+            if (!facilitatorCourseIds.includes(p.courseId)) {
+              return
+            }
+            
+            const studentId = p.studentId
+            if (!progressMap.has(studentId)) {
+              // Find student details from localStorage
+              const studentInfo = students.find((s: any) => s.id === studentId)
+              progressMap.set(studentId, {
+                studentId: studentId,
+                email: studentInfo?.email || `${studentId.slice(0, 8)}@example.com`,
+                name: studentInfo?.name || studentInfo?.email?.split('@')[0] || 'Student',
+                courses: []
+              })
+            }
+            
+            const studentProgress = progressMap.get(studentId)
+            // Find course name
+            const courseInfo = courses.find((c: any) => c.id === p.courseId)
+            studentProgress.courses.push({
+              courseId: p.courseId,
+              courseName: courseInfo?.title || 'Unknown Course',
+              progress: p.progress_percentage || 0,
+              status: p.status || (p.progress_percentage === 100 ? 'completed' : 'in-progress'),
+              lastUpdated: p.updatedAt || new Date().toISOString()
+            })
+          })
+        }
+        
+        const filteredProgress = Array.from(progressMap.values())
+        setProgressData(filteredProgress)
       } catch (error) {
         console.error('Failed to load progress data:', error)
       } finally {
@@ -56,7 +108,8 @@ export const FacilitatorProgress = () => {
 
   // Filter students based on search and progress filter
   const filteredStudents = progressData.filter(student => {
-    const matchesSearch = student.email?.toLowerCase().includes(searchTerm.toLowerCase())
+    const searchTarget = `${student.name} ${student.email}`.toLowerCase()
+    const matchesSearch = searchTarget.includes(searchTerm.toLowerCase())
     
     let matchesFilter = true
     if (filterProgress === 'completed') {
@@ -87,7 +140,7 @@ export const FacilitatorProgress = () => {
     if (progress === 100 || status === 'completed') {
       return <span className="px-2 py-1 bg-green-100 text-green-700 text-xs font-bold rounded-full">Completed</span>
     }
-    if (progress > 0) {
+    if (progress > 0 || status === 'in-progress') {
       return <span className="px-2 py-1 bg-blue-100 text-blue-700 text-xs font-bold rounded-full">In Progress</span>
     }
     return <span className="px-2 py-1 bg-gray-100 text-gray-600 text-xs font-bold rounded-full">Not Started</span>
@@ -252,7 +305,7 @@ export const FacilitatorProgress = () => {
                     {/* Student Info */}
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center justify-between mb-2">
-                        <h3 className="font-bold text-gray-900">{student.email?.split('@')[0] || 'Student'}</h3>
+                        <h3 className="font-bold text-gray-900">{student.name}</h3>
                         <span className="text-sm text-gray-500">{student.email}</span>
                       </div>
 

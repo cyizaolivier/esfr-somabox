@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../auth'
 import Sidebar from '../components/Sidebar'
 import { Bell, CheckSquare, MoreHorizontal, ClipboardList, Menu, Activity } from 'lucide-react'
-import { getStudentProgress } from '../api/progress.api'
+import { getStudentProgressById } from '../api/progress.api'
 interface CourseProgress {
   courseId: string;
   courseName: string;
@@ -70,7 +70,7 @@ export default function Dashboard() {
         if (!studentId) {
           throw new Error('No student ID found');
         }
-        const response = await getStudentProgress(studentId);
+        const response = await getStudentProgressById(studentId);
         const courses: CourseProgress[] = response.data.map((item: any) => ({
           courseId: item.courseId,
           courseName: `Course ${item.courseId.substring(0, 4)}`,

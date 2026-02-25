@@ -32,8 +32,14 @@ const saveUsers = (users: StoredUser[]) => {
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User>(() => {
-    const saved = localStorage.getItem('soma_auth');
-    return saved ? JSON.parse(saved) : null;
+    try {
+      const saved = localStorage.getItem('soma_auth');
+      return saved ? JSON.parse(saved) : null;
+    } catch {
+      // If localStorage data is corrupted, clear it and return null
+      localStorage.removeItem('soma_auth');
+      return null;
+    }
   })
 
   // Seed default Admin if no users exist

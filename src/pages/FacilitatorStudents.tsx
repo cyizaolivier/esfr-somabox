@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react'
 import DashboardLayout from '../components/DashboardLayout'
-import { Users, Search, Mail, Clock } from 'lucide-react'
+import { Users, Search, Mail, Clock, BookOpen, ArrowLeft } from 'lucide-react'
 import { getAllStudents } from '../api/course.api'
+import { getMyCourses, Course } from '../api/course.api'
+import { useAuth } from '../auth'
 
 interface Student {
   id: string
@@ -12,75 +14,132 @@ interface Student {
 }
 
 export const FacilitatorStudents = () => {
+  const { user } = useAuth()
   const [students, setStudents] = useState<Student[]>([])
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
-
+  const [myCourses, setMyCourses] = useState<Course[]>([])
   useEffect(() => {
-    const loadStudents = async () => {
+    const loadData = async () => {
       try {
         setLoading(true)
-        // Try to get students from API first
-        const apiStudents = await getAllStudents()
-        if (apiStudents && apiStudents.length > 0) {
-          setStudents(apiStudents)
-        } else {
-          // Fallback to localStorage
-          loadFromLocalStorage()
+        
+        // First, get facilitator's courses
+        let facilitatorCourseIds: string[] = []
+        try {
+          const courses = await getMyCourses()
+          setMyCourses(courses)
+          facilitatorCourseIds = courses.map(c => c.id)
+        } catch (err) {
+          console.error('Failed to fetch courses:', err)
         }
+        
+        // Get all students
+        let allStudents: Student[] = []
+        try {
+          const apiStudents = await getAllStudents()
+          if (apiStudents && apiStudents.length > 0) {
+            allStudents = apiStudents.map((s: any) => ({
+              id: s.id || s._id,
+              name: s.name || s.email?.split('@')[0] || 'Student',
+              email: s.email || '',
+              enrolledCourses: s.enrolledCourses || [],
+              joinDate: s.joinDate || s.createdAt || new Date().toISOString().split('T')[0]
+            }))
+          }
+        } catch (error) {
+          console.error('Failed to load students from API:', error)
+        }
+        
+        // If no students from API, fallback to localStorage
+        if (allStudents.length === 0) {
+          allStudents = loadFromLocalStorage()
+        }
+        
+        // Filter students to only show those enrolled in facilitator's courses
+        let filteredStudents = allStudents
+        if (facilitatorCourseIds.length > 0) {
+          filteredStudents = allStudents.filter(student => 
+            student.enrolledCourses?.some((courseId: string) => 
+              facilitatorCourseIds.includes(courseId)
+            )
+          )
+          
+          // Also check localStorage enrollments
+          const savedEnrollments = localStorage.getItem('soma_enrollments')
+          if (savedEnrollments) {
+            const enrollments = JSON.parse(savedEnrollments)
+            const courseEnrollments = enrollments.filter((e: any) => facilitatorCourseIds.includes(e.courseId))
+            const enrollmentStudentIds = [...new Set(courseEnrollments.map((e: any) => e.studentId))]
+            
+            // Add students from enrollments if not already included
+            enrollmentStudentIds.forEach((studentId: unknown) => {
+              if (!filteredStudents.find(s => s.id === studentId)) {
+                const enrollment = courseEnrollments.find((e: any) => e.studentId === studentId)
+                if (enrollment) {
+                  filteredStudents.push({
+                    id: String(studentId),
+                    name: enrollment.studentName || 'Student',
+                    email: enrollment.studentEmail || '',
+                    enrolledCourses: courseEnrollments
+                      .filter((e: any) => e.studentId === studentId)
+                      .map((e: any) => e.courseId),
+                    joinDate: enrollment.enrolledAt || new Date().toISOString().split('T')[0]
+                  })
+                }
+              }
+            })
+          }
+        }
+        
+        setStudents(filteredStudents)
       } catch (error) {
-        console.error('Failed to load students from API:', error)
-        // Fallback to localStorage
-        loadFromLocalStorage()
+        console.error('Failed to load data:', error)
       } finally {
         setLoading(false)
       }
     }
 
-    const loadFromLocalStorage = () => {
-      try {
-        let allStudents: Student[] = []
-        
-        const savedUsers = localStorage.getItem('soma_users')
-        if (savedUsers) {
-          const users = JSON.parse(savedUsers)
-          const studentUsers = users
-            .filter((u: any) => u.role === 'Student')
-            .map((u: any) => ({
-              id: u.id || `student_${Math.random().toString(36).substr(2, 9)}`,
-              name: u.name || u.email?.split('@')[0] || 'Student',
-              email: u.email || '',
-              enrolledCourses: u.enrolledCourses || [],
-              joinDate: u.joinDate || new Date().toISOString().split('T')[0]
-            }))
-          allStudents = [...studentUsers]
-        }
-        
-        const savedEnrollments = localStorage.getItem('soma_enrollments')
-        if (savedEnrollments) {
-          const enrollments = JSON.parse(savedEnrollments)
-          const enrollmentStudentIds = [...new Set(enrollments.map((e: any) => e.studentId))] as string[]
-          enrollmentStudentIds.forEach((studentId: string) => {
-            if (!allStudents.find(s => s.id === studentId)) {
-              const enrollment = enrollments.find((e: any) => e.studentId === studentId)
-              allStudents.push({
-                id: studentId,
-                name: enrollment?.studentName || 'Student',
-                email: enrollment?.studentEmail || '',
-                enrolledCourses: [enrollment?.courseId].filter(Boolean),
-                joinDate: enrollment?.enrolledAt || new Date().toISOString().split('T')[0]
-              })
-            }
-          })
-        }
-        
-        setStudents(allStudents)
-      } catch (error) {
-        console.error('Failed to load students from localStorage:', error)
+    const loadFromLocalStorage = (): Student[] => {
+      let allStudents: Student[] = []
+      
+      const savedUsers = localStorage.getItem('soma_users')
+      if (savedUsers) {
+        const users = JSON.parse(savedUsers)
+        const studentUsers = users
+          .filter((u: any) => u.role === 'Student')
+          .map((u: any) => ({
+            id: u.id || `student_${Math.random().toString(36).substr(2, 9)}`,
+            name: u.name || u.email?.split('@')[0] || 'Student',
+            email: u.email || '',
+            enrolledCourses: u.enrolledCourses || [],
+            joinDate: u.joinDate || new Date().toISOString().split('T')[0]
+          }))
+        allStudents = [...studentUsers]
       }
+      
+      const savedEnrollments = localStorage.getItem('soma_enrollments')
+      if (savedEnrollments) {
+        const enrollments = JSON.parse(savedEnrollments)
+        const enrollmentStudentIds = [...new Set(enrollments.map((e: any) => e.studentId))] as string[]
+        enrollmentStudentIds.forEach((studentId: string) => {
+          if (!allStudents.find(s => s.id === studentId)) {
+            const enrollment = enrollments.find((e: any) => e.studentId === studentId)
+            allStudents.push({
+              id: studentId,
+              name: enrollment?.studentName || 'Student',
+              email: enrollment?.studentEmail || '',
+              enrolledCourses: [enrollment?.courseId].filter(Boolean),
+              joinDate: enrollment?.enrolledAt || new Date().toISOString().split('T')[0]
+            })
+          }
+        })
+      }
+      
+      return allStudents
     }
 
-    loadStudents()
+    loadData()
   }, [])
 
   const filteredStudents = students.filter(student =>
@@ -88,14 +147,26 @@ export const FacilitatorStudents = () => {
     student.email.toLowerCase().includes(searchTerm.toLowerCase())
   )
 
+  // Get course names for a student
+  const getCourseNames = (courseIds: string[]) => {
+    return courseIds.map(id => {
+      const course = myCourses.find(c => c.id === id)
+      return course?.title || 'Unknown Course'
+    })
+  }
+
   return (
     <DashboardLayout title="Students">
       <div className="space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
-            <h2 className="text-2xl font-bold text-gray-900">All Students</h2>
-            <p className="text-gray-500 mt-1">{students.length} students enrolled</p>
+            <h2 className="text-2xl font-bold text-gray-900">My Students</h2>
+            <p className="text-gray-500 mt-1">{students.length} students enrolled in your courses</p>
+          </div>
+          <div className="flex items-center gap-2 text-sm text-gray-500">
+            <BookOpen size={16} />
+            <span>{myCourses.length} Courses</span>
           </div>
         </div>
 
@@ -146,14 +217,18 @@ export const FacilitatorStudents = () => {
                 </div>
                 
                 <div className="mt-4 pt-4 border-t border-gray-100">
-                  <div className="flex items-center justify-between text-sm">
-                    <div className="flex items-center gap-2 text-gray-500">
-                      <Clock size={14} />
-                      <span>Joined: {student.joinDate}</span>
-                    </div>
-                    <span className="px-3 py-1 bg-green-100 text-green-700 text-xs font-bold rounded-full">
-                      {student.enrolledCourses.length} Courses
-                    </span>
+                  <div className="flex items-center gap-2 text-sm text-gray-500 mb-2">
+                    <Clock size={14} />
+                    <span>Joined: {student.joinDate}</span>
+                  </div>
+                  <div className="space-y-1">
+                    <span className="text-xs font-bold text-gray-400 uppercase">Enrolled Courses:</span>
+                    {getCourseNames(student.enrolledCourses).map((courseName, idx) => (
+                      <div key={idx} className="flex items-center gap-2">
+                        <BookOpen size={12} className="text-primary" />
+                        <span className="text-sm text-gray-700 truncate">{courseName}</span>
+                      </div>
+                    ))}
                   </div>
                 </div>
               </div>

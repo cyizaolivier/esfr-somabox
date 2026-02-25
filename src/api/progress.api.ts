@@ -1,9 +1,17 @@
 import { api } from "./api";
 
 // Get all students progress (for facilitators)
+// Uses: GET /api/progress/student
+// Returns array of progress records with studentId, courseId, progress_percentage, etc.
 export const getAllProgress = async () => {
     try {
-        const response = await api.get('/progress');
+        const response = await api.get('/progress/student');
+        
+        // Save to localStorage as backup
+        if (response.data && response.data.length > 0) {
+            localStorage.setItem('soma_student_progress', JSON.stringify(response.data));
+        }
+        
         return response.data || [];
     } catch (error) {
         // Fallback: get from localStorage
@@ -16,18 +24,19 @@ export const getAllProgress = async () => {
     }
 }
 
-// Get progress by student
-export const getStudentProgress = async (studentId: string) => {
+// Get progress by student ID
+// Uses: GET /api/progress/student/{id}
+export const getStudentProgressById = async (studentId: string) => {
     try {
-        const response = await api.get(`/progress/student?student_id=${studentId}`);
-        return response.data || response;
+        const response = await api.get(`/progress/student/${studentId}`);
+        return response.data || null;
     } catch (error) {
         // Fallback: get from localStorage
         console.warn('API fetch failed, using localStorage fallback');
         const savedProgress = localStorage.getItem('soma_student_progress');
         if (savedProgress) {
             const allProgress = JSON.parse(savedProgress);
-            return allProgress.find((p: any) => p.email === studentId);
+            return allProgress.filter((p: any) => p.studentId === studentId);
         }
         return null;
     }

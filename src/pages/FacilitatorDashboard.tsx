@@ -31,7 +31,8 @@ export const FacilitatorDashboard = () => {
   const location = useLocation()
   const navigate = useNavigate()
   const isCoursesView = location.pathname === '/facilitator/courses'
-  const [view, setView] = useState<'stats' | 'studentList' | 'messages' | 'comments'>('stats')
+  const [view, setView] = useState<'stats' | 'studentList' | 'messages' | 'comments' | 'courseStudents'>('stats')
+  const [selectedCourseForStudents, setSelectedCourseForStudents] = useState<{id: string, title: string} | null>(null)
 
   const [studentCount, setStudentCount] = useState(0)
   const [comments, setComments] = useState<Comment[]>([])
@@ -61,7 +62,7 @@ export const FacilitatorDashboard = () => {
     } else {
       setLoading(false)
     }
-  }, [user])
+  }, [user, location.pathname])
 
   useEffect(() => {
     const loadStudentCount = async () => {
@@ -395,9 +396,96 @@ export const FacilitatorDashboard = () => {
   // Get total comment count
   const totalComments = comments.length
   
+  // Get students enrolled in a specific course
+  const getStudentsForCourse = (courseId: string) => {
+    const savedEnrollments = localStorage.getItem('soma_enrollments');
+    const savedUsers = localStorage.getItem('soma_users');
+    
+    if (savedEnrollments) {
+      const enrollments = JSON.parse(savedEnrollments);
+      const courseEnrollments = enrollments.filter((e: any) => e.courseId === courseId);
+      
+      if (savedUsers) {
+        const users = JSON.parse(savedUsers);
+        return courseEnrollments.map((e: any) => {
+          const user = users.find((u: any) => u.id === e.studentId || u.email === e.studentEmail);
+          return {
+            id: e.studentId,
+            name: e.studentName || user?.name || e.studentEmail?.split('@')[0] || 'Student',
+            email: e.studentEmail || user?.email || '',
+            enrolledAt: e.enrolledAt || e.createdAt || new Date().toISOString()
+          };
+        });
+      }
+      return courseEnrollments.map((e: any) => ({
+        id: e.studentId,
+        name: e.studentName || 'Student',
+        email: e.studentEmail || '',
+        enrolledAt: e.enrolledAt || e.createdAt || new Date().toISOString()
+      }));
+    }
+    return [];
+  };
+
+  // Course Students View Component
+  const CourseStudentsView = () => {
+    const courseStudents = selectedCourseForStudents ? getStudentsForCourse(selectedCourseForStudents.id) : [];
+    
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-2xl font-bold text-gray-900">Students in Course</h2>
+            <p className="text-gray-500 mt-1">{selectedCourseForStudents?.title}</p>
+          </div>
+          <button
+            onClick={() => { setView('stats'); setSelectedCourseForStudents(null); }}
+            className="text-primary font-bold text-sm hover:underline"
+          >
+            Back to Overview
+          </button>
+        </div>
+
+        <div className="bg-white/40 backdrop-blur-md border border-primary/10 rounded-[2rem] overflow-hidden">
+          {courseStudents.length > 0 ? (
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="bg-primary/5">
+                  <th className="px-6 py-4 text-xs font-bold text-primary uppercase tracking-wider">Student Name</th>
+                  <th className="px-6 py-4 text-xs font-bold text-primary uppercase tracking-wider">Email</th>
+                  <th className="px-6 py-4 text-xs font-bold text-primary uppercase tracking-wider">Enrolled Date</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-primary/5">
+                {courseStudents.map((student: any, i: number) => (
+                  <tr key={i} className="hover:bg-primary/5 transition-colors">
+                    <td className="px-6 py-4 text-sm font-medium text-gray-900">{student.name}</td>
+                    <td className="px-6 py-4 text-sm text-gray-600">{student.email}</td>
+                    <td className="px-6 py-4 text-sm text-gray-500">{new Date(student.enrolledAt).toLocaleDateString()}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          ) : (
+            <div className="px-6 py-20 text-center text-gray-400 font-bold italic">
+              No students enrolled in this course yet
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  };
+
   // Navigate to course outline when clicking on a course
   const handleCourseClick = (courseId: string) => {
     navigate(`/facilitator/course-outline/${courseId}`)
+  }
+
+  // Handle clicking on student count to see students
+  const handleStudentCountClick = (course: {id: string, title: string}, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setSelectedCourseForStudents(course);
+    setView('courseStudents');
   }
 
   return (
@@ -517,6 +605,7 @@ export const FacilitatorDashboard = () => {
         {!isCoursesView && view === 'studentList' && <StudentList />}
         {!isCoursesView && view === 'messages' && <RecentMessages />}
         {!isCoursesView && view === 'comments' && <CourseComments />}
+        {view === 'courseStudents' && <CourseStudentsView />}
 
         {/* Courses Section */}
         <div className="space-y-6">
@@ -575,7 +664,13 @@ export const FacilitatorDashboard = () => {
                   <div className="space-y-2">
                     <h3 className="font-bold text-gray-900 truncate">{course.title}</h3>
                     <div className="flex items-center gap-4 text-sm text-gray-500">
-                      <span className="flex items-center gap-1"><Users size={14} /> {course.students} students</span>
+                      <button 
+                        onClick={(e) => handleStudentCountClick({id: course.id, title: course.title}, e)}
+                        className="flex items-center gap-1 hover:text-primary transition-colors"
+                      >
+                        <Users size={14} /> 
+                        <span>{course.students} students</span>
+                      </button>
                     </div>
                     <div className="space-y-1">
                       <div className="flex items-center gap-3">
