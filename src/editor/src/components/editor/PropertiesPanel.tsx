@@ -444,50 +444,7 @@ export const PropertiesPanel: React.FC = () => {
                     </div>
                 )}
 
-                {/* Video specialized settings */}
-                {selectedElement.type === 'video' && (
-                    <div className="space-y-4 p-4 bg-slate-50 rounded-xl border border-slate-200">
-                        <div className="flex items-center gap-2 text-slate-700 font-bold text-xs uppercase">
-                            <Clock size={14} />
-                            <span>Video Markers</span>
-                        </div>
-                        <div className="space-y-2">
-                            {(selectedElement.metadata?.markers || []).map((m: any, i: number) => (
-                                <div key={i} className="flex items-center gap-2 bg-white p-2 rounded border border-slate-200 text-xs text-slate-600">
-                                    <Clock size={12} className="text-slate-400" />
-                                    <span className="font-mono">{m.time}s</span>
-                                    <span className="flex-1 truncate">{m.label}</span>
-                                    <button
-                                        onClick={() => {
-                                            const newMarkers = selectedElement.metadata.markers.filter((_: any, idx: number) => idx !== i);
-                                            dispatch({ type: 'UPDATE_ELEMENT', payload: { id: selectedElement.id, metadata: { ...selectedElement.metadata, markers: newMarkers } } });
-                                        }}
-                                        className="text-red-400 hover:text-red-600"
-                                    >
-                                        <Trash2 size={12} />
-                                    </button>
-                                </div>
-                            ))}
-                        </div>
-                        <div className="flex gap-2">
-                            <input id="new-marker-time" type="text" placeholder="1:20" className="w-16 text-xs border rounded p-1" />
-                            <button
-                                onClick={() => {
-                                    const timeStr = (document.getElementById('new-marker-time') as HTMLInputElement).value;
-                                    const match = timeStr.match(/(\d+):(\d+)/);
-                                    const seconds = match ? parseInt(match[1]) * 60 + parseInt(match[2]) : parseInt(timeStr);
-                                    if (isNaN(seconds)) return alert('Invalid time format');
 
-                                    const newMarkers = [...(selectedElement.metadata?.markers || []), { time: seconds, label: 'Pause + Quiz' }];
-                                    dispatch({ type: 'UPDATE_ELEMENT', payload: { id: selectedElement.id, metadata: { ...selectedElement.metadata, markers: newMarkers } } });
-                                }}
-                                className="flex-1 bg-slate-800 text-white text-[10px] font-bold py-1 px-2 rounded hover:bg-slate-900 transition-colors"
-                            >
-                                Add Marker
-                            </button>
-                        </div>
-                    </div>
-                )}
 
                 <div className="pt-6 border-t border-gray-200">
                     <button

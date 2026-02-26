@@ -19,12 +19,91 @@ export const FacilitatorStudents = () => {
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
   const [myCourses, setMyCourses] = useState<Course[]>([])
+  
   useEffect(() => {
     const loadData = async () => {
       try {
         setLoading(true)
         
-        // First, get facilitator's courses
+        // Collect ALL students from all possible sources
+        let allStudentsMap = new Map<string, Student>()
+        
+        // FIRST: Try localStorage users (most reliable)
+        try {
+          const savedUsers = localStorage.getItem('soma_users')
+          if (savedUsers) {
+            const users = JSON.parse(savedUsers)
+            console.log('Users from localStorage:', users)
+            users.forEach((u: any) => {
+              if (u.role === 'Student') {
+                const key = u.id || u.email
+                if (!allStudentsMap.has(key)) {
+                  allStudentsMap.set(key, {
+                    id: u.id || key,
+                    name: u.name || u.email?.split('@')[0] || 'Student',
+                    email: u.email || '',
+                    enrolledCourses: u.enrolledCourses || [],
+                    joinDate: u.joinDate || new Date().toISOString().split('T')[0]
+                  })
+                }
+              }
+            })
+          }
+        } catch (e) {
+          console.error('Error loading users from localStorage:', e)
+        }
+        
+        // SECOND: Try localStorage enrollments
+        try {
+          const savedEnrollments = localStorage.getItem('soma_enrollments')
+          if (savedEnrollments) {
+            const enrollments = JSON.parse(savedEnrollments)
+            console.log('Enrollments from localStorage:', enrollments)
+            enrollments.forEach((e: any) => {
+              const key = e.studentId || e.studentEmail
+              if (!allStudentsMap.has(key)) {
+                allStudentsMap.set(key, {
+                  id: e.studentId || key,
+                  name: e.studentName || e.studentEmail?.split('@')[0] || 'Student',
+                  email: e.studentEmail || '',
+                  enrolledCourses: [e.courseId].filter(Boolean),
+                  joinDate: e.enrolledAt || new Date().toISOString().split('T')[0]
+                })
+              } else {
+                // Add course to existing student
+                const existing = allStudentsMap.get(key)
+                if (existing && e.courseId && !existing.enrolledCourses.includes(e.courseId)) {
+                  existing.enrolledCourses.push(e.courseId)
+                }
+              }
+            })
+          }
+        } catch (e) {
+          console.error('Error loading enrollments from localStorage:', e)
+        }
+        
+        // THIRD: Try API (will likely fail)
+        try {
+          const apiStudents = await getAllStudents()
+          if (apiStudents && apiStudents.length > 0) {
+            apiStudents.forEach((s: any) => {
+              const key = s.id || s._id || s.email
+              if (!allStudentsMap.has(key)) {
+                allStudentsMap.set(key, {
+                  id: s.id || s._id,
+                  name: s.name || s.email?.split('@')[0] || 'Student',
+                  email: s.email || '',
+                  enrolledCourses: s.enrolledCourses || [],
+                  joinDate: s.joinDate || s.createdAt || new Date().toISOString().split('T')[0]
+                })
+              }
+            })
+          }
+        } catch (error) {
+          console.error('Failed to load students from API:', error)
+        }
+        
+        // Finally, try to get facilitator's courses (for filtering)
         let facilitatorCourseIds: string[] = []
         try {
           const courses = await getMyCourses()
@@ -34,109 +113,42 @@ export const FacilitatorStudents = () => {
           console.error('Failed to fetch courses:', err)
         }
         
-        // Get all students
-        let allStudents: Student[] = []
-        try {
-          const apiStudents = await getAllStudents()
-          if (apiStudents && apiStudents.length > 0) {
-            allStudents = apiStudents.map((s: any) => ({
-              id: s.id || s._id,
-              name: s.name || s.email?.split('@')[0] || 'Student',
-              email: s.email || '',
-              enrolledCourses: s.enrolledCourses || [],
-              joinDate: s.joinDate || s.createdAt || new Date().toISOString().split('T')[0]
-            }))
-          }
-        } catch (error) {
-          console.error('Failed to load students from API:', error)
-        }
+        console.log('All students collected:', Array.from(allStudentsMap.values()))
         
-        // If no students from API, fallback to localStorage
-        if (allStudents.length === 0) {
-          allStudents = loadFromLocalStorage()
-        }
+        // Convert map to array
+        let finalStudents = Array.from(allStudentsMap.values())
+        console.log('Final students before filtering:', finalStudents)
         
-        // Filter students to only show those enrolled in facilitator's courses
-        let filteredStudents = allStudents
-        if (facilitatorCourseIds.length > 0) {
-          filteredStudents = allStudents.filter(student => 
-            student.enrolledCourses?.some((courseId: string) => 
-              facilitatorCourseIds.includes(courseId)
-            )
-          )
+        // If we have students from enrollments, show them regardless of course filtering
+        // This ensures students are shown even if course IDs don't match
+        const hasEnrollments = finalStudents.length > 0 && finalStudents.some(s => s.enrolledCourses?.length > 0)
+        
+        if (hasEnrollments && finalStudents.length > 0) {
+          // Show all collected students (don't filter by facilitator courses)
+          console.log('Showing students from enrollments')
+        } else if (facilitatorCourseIds.length > 0 || myCourses.length > 0) {
+          // Only filter by courses if we have facilitator courses and no enrollment students
+          const courseNames = myCourses.map(c => c.title?.toLowerCase()).filter(Boolean)
+          console.log('Course names to filter:', courseNames)
           
-          // Also check localStorage enrollments
-          const savedEnrollments = localStorage.getItem('soma_enrollments')
-          if (savedEnrollments) {
-            const enrollments = JSON.parse(savedEnrollments)
-            const courseEnrollments = enrollments.filter((e: any) => facilitatorCourseIds.includes(e.courseId))
-            const enrollmentStudentIds = [...new Set(courseEnrollments.map((e: any) => e.studentId))]
-            
-            // Add students from enrollments if not already included
-            enrollmentStudentIds.forEach((studentId: unknown) => {
-              if (!filteredStudents.find(s => s.id === studentId)) {
-                const enrollment = courseEnrollments.find((e: any) => e.studentId === studentId)
-                if (enrollment) {
-                  filteredStudents.push({
-                    id: String(studentId),
-                    name: enrollment.studentName || 'Student',
-                    email: enrollment.studentEmail || '',
-                    enrolledCourses: courseEnrollments
-                      .filter((e: any) => e.studentId === studentId)
-                      .map((e: any) => e.courseId),
-                    joinDate: enrollment.enrolledAt || new Date().toISOString().split('T')[0]
-                  })
-                }
-              }
+          finalStudents = finalStudents.filter(student =>
+            student.enrolledCourses?.some((courseId: string) => {
+              // Check by course ID
+              if (facilitatorCourseIds.includes(courseId)) return true
+              // Check by course name match in the course ID field
+              if (courseNames.some(name => courseId?.toLowerCase().includes(name))) return true
+              return false
             })
-          }
+          )
         }
         
-        setStudents(filteredStudents)
+        console.log('Final students after filtering:', finalStudents)
+        setStudents(finalStudents)
       } catch (error) {
         console.error('Failed to load data:', error)
       } finally {
         setLoading(false)
       }
-    }
-
-    const loadFromLocalStorage = (): Student[] => {
-      let allStudents: Student[] = []
-      
-      const savedUsers = localStorage.getItem('soma_users')
-      if (savedUsers) {
-        const users = JSON.parse(savedUsers)
-        const studentUsers = users
-          .filter((u: any) => u.role === 'Student')
-          .map((u: any) => ({
-            id: u.id || `student_${Math.random().toString(36).substr(2, 9)}`,
-            name: u.name || u.email?.split('@')[0] || 'Student',
-            email: u.email || '',
-            enrolledCourses: u.enrolledCourses || [],
-            joinDate: u.joinDate || new Date().toISOString().split('T')[0]
-          }))
-        allStudents = [...studentUsers]
-      }
-      
-      const savedEnrollments = localStorage.getItem('soma_enrollments')
-      if (savedEnrollments) {
-        const enrollments = JSON.parse(savedEnrollments)
-        const enrollmentStudentIds = [...new Set(enrollments.map((e: any) => e.studentId))] as string[]
-        enrollmentStudentIds.forEach((studentId: string) => {
-          if (!allStudents.find(s => s.id === studentId)) {
-            const enrollment = enrollments.find((e: any) => e.studentId === studentId)
-            allStudents.push({
-              id: studentId,
-              name: enrollment?.studentName || 'Student',
-              email: enrollment?.studentEmail || '',
-              enrolledCourses: [enrollment?.courseId].filter(Boolean),
-              joinDate: enrollment?.enrolledAt || new Date().toISOString().split('T')[0]
-            })
-          }
-        })
-      }
-      
-      return allStudents
     }
 
     loadData()

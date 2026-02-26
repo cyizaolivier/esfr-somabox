@@ -5,7 +5,7 @@ export type { UserRole }
 
 type User = { id: string; email: string; role: UserRole } | null
 
-type StoredUser = { email: string; password: string; role: UserRole }
+type StoredUser = { id: string; name: string; email: string; password: string; role: UserRole }
 
 type AuthContext = {
   user: User
@@ -47,6 +47,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const currentUsers = getUsers();
     if (currentUsers.length === 0) {
       saveUsers([{
+        id: 'admin_001',
+        name: 'Admin',
         email: 'admin@somabox.com',
         password: 'admin123',
         role: 'Admin'
@@ -145,7 +147,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       // Also save to localStorage for local user management
       const existingUsers = getUsers();
-      const newUser = { email, password, role };
+      const newUser = { 
+        id: `user_${Date.now()}`,
+        name, 
+        email, 
+        password, 
+        role 
+      };
       saveUsers([...existingUsers, newUser]);
 
       // Return success message from API if available

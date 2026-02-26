@@ -71,12 +71,16 @@ export default function Dashboard() {
           throw new Error('No student ID found');
         }
         const response = await getStudentProgressById(studentId);
-        const courses: CourseProgress[] = response.data.map((item: any) => ({
+        console.log('Student progress response:', response);
+        // Get course details for proper names
+        const coursesResponse = await import('../api/course.api').then(m => m.getAllCourses());
+        const coursesMap = new Map((coursesResponse || []).map((c: any) => [c.id, c]));
+        const courses: CourseProgress[] = (response.data || response || []).map((item: any) => ({
           courseId: item.courseId,
-          courseName: `Course ${item.courseId.substring(0, 4)}`,
-          progress: item.progress_percentage,
+          courseName: coursesMap.get(item.courseId)?.title || `Course ${item.courseId?.substring(0, 4) || 'Unknown'}`,
+          progress: item.progress_percentage ?? item.progress ?? 0,
           status: item.status as 'completed' | 'in-progress' | 'pending',
-          lastUpdated: new Date().toISOString()
+          lastUpdated: item.updatedAt || new Date().toISOString()
         }));
 
         setStudentProgress(prev => ({
