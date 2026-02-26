@@ -91,12 +91,23 @@ export const MetadataForm: React.FC = () => {
                                 onChange={(e) => setFormData({ ...formData, level: e.target.value })}
                                 className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary focus:bg-white transition-all outline-none"
                             >
-                                <option value="Senior 1">Senior 1</option>
-                                <option value="Senior 2">Senior 2</option>
-                                <option value="Senior 3">Senior 3</option>
-                                <option value="Senior 4">Senior 4</option>
-                                <option value="Senior 5">Senior 5</option>
-                                <option value="Senior 6">Senior 6</option>
+                                <option value="P1">Primary 1</option>
+                                <option value="P2">Primary 2</option>
+                                <option value="P3">Primary 3</option>
+                                <option value="P4">Primary 4</option>
+                                <option value="P5">Primary 5</option>
+                                <option value="P6">Primary 6</option>
+                                <option value="S1">Senior 1</option>
+                                <option value="S2">Senior 2</option>
+                                <option value="S3">Senior 3</option>
+                                <option value="S4">Senior 4</option>
+                                <option value="S5">Senior 5</option>
+                                <option value="S6">Senior 6</option>
+                                <option value="L3">Level 3</option>
+                                <option value="L4">Level 4</option>
+                                <option value="L5">Level 5</option>
+
+
                             </select>
                         </div>
 

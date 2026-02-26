@@ -1,5 +1,6 @@
-import React, { createContext, useContext, useState } from 'react'
+import React, { createContext, useContext, useState, useEffect } from 'react'
 import { signin, signup, registerUser, UserRole } from './api/auth.api'
+import { parseJsonSafe } from './utils/storage'
 
 export type { UserRole }
 
@@ -23,7 +24,7 @@ const AuthContext = createContext<AuthContext | undefined>(undefined)
 // Helper to manage persistent user list
 const getUsers = (): StoredUser[] => {
   const users = localStorage.getItem('soma_users');
-  return users ? JSON.parse(users) : [];
+  return parseJsonSafe<StoredUser[]>(users, []);
 };
 
 const saveUsers = (users: StoredUser[]) => {
@@ -32,14 +33,17 @@ const saveUsers = (users: StoredUser[]) => {
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User>(() => {
-    try {
-      const saved = localStorage.getItem('soma_auth');
-      return saved ? JSON.parse(saved) : null;
-    } catch {
-      // If localStorage data is corrupted, clear it and return null
-      localStorage.removeItem('soma_auth');
-      return null;
+    const saved = localStorage.getItem('soma_auth');
+    const parsed = parseJsonSafe<User>(saved, null);
+
+    // Basic validation: ensure parsed user has required fields
+    if (parsed && typeof parsed === 'object' && parsed.email && parsed.role) {
+      return parsed;
     }
+
+    // If invalid or missing, clear and return null
+    if (saved) localStorage.removeItem('soma_auth');
+    return null;
   })
 
   // Seed default Admin if no users exist

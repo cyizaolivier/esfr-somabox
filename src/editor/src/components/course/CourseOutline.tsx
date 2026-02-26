@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { useCourse } from '../../state/CourseContext';
 import { List, Plus, Home, Download, FileJson, Cloud, ArrowLeft, Users, Trash2 } from 'lucide-react';
 import { createCourse, getCourseById, getCourseStudents, deleteCourse, getAllCourses } from '../../../../api/course.api';
+import { parseJsonSafe } from '../../../../utils/storage';
 import { generateCourseExport } from '../../lib/htmlGenerator';
 import { serializeFullCourse } from '../../lib/serialization';
 import {
@@ -39,8 +40,8 @@ export const CourseOutline: React.FC = () => {
                     setLoading(true);
                     const course = await getCourseById(courseId);
                     // Update context with course metadata
-                    dispatch({ 
-                        type: 'UPDATE_METADATA', 
+                    dispatch({
+                        type: 'UPDATE_METADATA',
                         payload: {
                             title: course.title,
                             description: course.description,
@@ -50,7 +51,7 @@ export const CourseOutline: React.FC = () => {
                         }
                     });
                     dispatch({ type: 'SET_BACKEND_COURSE_ID', payload: course.id });
-                    
+
                     // Load students enrolled in this course
                     const courseStudents = await getCourseStudents(courseId);
                     setStudents(courseStudents);
@@ -114,13 +115,13 @@ export const CourseOutline: React.FC = () => {
             alert('No course ID found. Course may not be saved yet.');
             return;
         }
-        
+
         const confirmDelete = window.confirm(`Are you sure you want to delete this course? This will delete course ID: ${courseId}`);
         if (!confirmDelete) return;
 
         try {
             setLoading(true);
-            
+
             // First, sync courses from API to localStorage (in case they aren't there)
             try {
                 const allCourses = await getAllCourses();
@@ -128,13 +129,13 @@ export const CourseOutline: React.FC = () => {
             } catch (syncError) {
                 console.log('Could not sync courses:', syncError);
             }
-            
+
             // Debug: Check what's in localStorage before delete
             console.log('=== DELETE DEBUG ===');
             console.log('Course ID to delete:', courseId);
             const savedCoursesBefore = localStorage.getItem('soma_courses');
-            console.log('Courses in localStorage before:', savedCoursesBefore ? JSON.parse(savedCoursesBefore) : 'No courses found');
-            
+            console.log('Courses in localStorage before:', parseJsonSafe(savedCoursesBefore, 'No courses found'));
+
             // Try API delete first
             let apiDeleted = false;
             try {
@@ -144,45 +145,45 @@ export const CourseOutline: React.FC = () => {
             } catch (apiError: any) {
                 console.log('API delete failed:', apiError.message);
             }
-            
+
             // Always try to delete from localStorage directly
             const savedCourses = localStorage.getItem('soma_courses');
             if (savedCourses) {
-                const courses = JSON.parse(savedCourses);
+                const courses = parseJsonSafe<any[]>(savedCourses, []);
                 const courseExists = courses.find((c: any) => c.id === courseId);
                 console.log('Course exists in localStorage:', !!courseExists);
-                
+
                 const filteredCourses = courses.filter((c: any) => c.id !== courseId);
                 localStorage.setItem('soma_courses', JSON.stringify(filteredCourses));
                 console.log('Deleted from localStorage. Remaining courses:', filteredCourses.length);
             } else {
                 console.log('No courses in localStorage - cannot delete from localStorage');
             }
-            
+
             // Also remove enrollments for this course
             const savedEnrollments = localStorage.getItem('soma_enrollments');
             if (savedEnrollments) {
-                const enrollments = JSON.parse(savedEnrollments);
+                const enrollments = parseJsonSafe<any[]>(savedEnrollments, []);
                 const filteredEnrollments = enrollments.filter((e: any) => e.courseId !== courseId);
                 localStorage.setItem('soma_enrollments', JSON.stringify(filteredEnrollments));
             }
-            
+
             // Verify deletion
             const savedCoursesAfter = localStorage.getItem('soma_courses');
-            const coursesAfter = savedCoursesAfter ? JSON.parse(savedCoursesAfter) : [];
+            const coursesAfter = parseJsonSafe<any[]>(savedCoursesAfter, []);
             const courseStillExists = coursesAfter.find((c: any) => c.id === courseId);
-            
+
             console.log('Course still exists after delete:', !!courseStillExists);
             console.log('===================');
-            
+
             if (courseStillExists && !apiDeleted) {
                 alert('Warning: Course may not have been fully deleted. Check console for details.');
             } else {
                 alert('Course deleted successfully!');
             }
-            
-            // Force a full page navigation to ensure fresh data
-            window.location.href = '/facilitator/courses';
+
+            // Navigate using React Router (no full-page reload)
+            navigate('/facilitator/dashboard');
         } catch (error: any) {
             console.error('Failed to delete course:', error);
             alert('Failed to delete course: ' + (error.message || 'Unknown error'));

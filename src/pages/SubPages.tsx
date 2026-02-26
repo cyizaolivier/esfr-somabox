@@ -4,7 +4,7 @@ import Sidebar from '../components/Sidebar'
 import DashboardLayout from '../components/DashboardLayout'
 import { Book, Bookmark, Folder, Search, User, Shield, Bell, HardDrive, PlayCircle, ChevronRight, ArrowLeft, Mail, Download, MoreHorizontal, Paperclip, Send, Menu, MessageSquare, Trash2, CheckSquare, Upload, X } from 'lucide-react'
 import { useAuth } from '../auth'
-import { getAllCourses } from '../api/course.api'
+import { getAllCourses, getCoursesByLevel, searchCourses } from '../api/course.api'
 import rwandanProgramImg from '../assets/Rwandan program.jpg'
 import internationalProgramImg from '../assets/international program.jpg'
 import otherSchoolContentsImg from '../assets/other school contents.jpg'
@@ -12,21 +12,26 @@ import nurseryStudentsImg from '../assets/nursery students.jpg'
 import primaryStudentsImg from '../assets/primary students.jpg'
 import secondaryStudentsImg from '../assets/secondary students.jpg'
 import universityStudentsImg from '../assets/University students.jpg'
+import { parseJsonSafe } from '../utils/storage'
 
 const Layout = DashboardLayout;
 
 export const Library = () => {
     const navigate = useNavigate();
     const [courses, setCourses] = React.useState<any[]>([]);
+    const [searchResults, setSearchResults] = React.useState<any[]>([]);
+    const [searchQuery, setSearchQuery] = React.useState('');
     const [loading, setLoading] = React.useState(true);
+    const [searching, setSearching] = React.useState(false);
     const [error, setError] = React.useState<string | null>(null);
+    const debounceRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
 
+    // Load all courses on mount
     React.useEffect(() => {
         const fetchCourses = async () => {
             try {
-                const response = await getAllCourses();
-                // getAllCourses now returns Course[] directly
-                setCourses(response);
+                const data = await getAllCourses();
+                setCourses(data);
             } catch (err) {
                 setError('Failed to load courses');
                 console.error('Error fetching courses:', err);
@@ -37,15 +42,66 @@ export const Library = () => {
         fetchCourses();
     }, []);
 
+    // Debounced search on keyup
+    const handleSearchKeyUp = (e: React.KeyboardEvent<HTMLInputElement>) => {
+        const query = (e.target as HTMLInputElement).value.trim();
+        setSearchQuery(query);
+
+        if (debounceRef.current) clearTimeout(debounceRef.current);
+
+        if (!query) {
+            setSearchResults([]);
+            setSearching(false);
+            return;
+        }
+
+        debounceRef.current = setTimeout(async () => {
+            setSearching(true);
+            try {
+                const data = await searchCourses(query);
+                setSearchResults(data ?? []);
+            } catch (err) {
+                console.error('Search error:', err);
+                setSearchResults([]);
+            } finally {
+                setSearching(false);
+            }
+        }, 350);
+    };
+
+    // Show search results when query is active, otherwise show all courses
+    const displayedCourses = searchQuery ? searchResults : courses;
+    const isSearchMode = !!searchQuery;
+
     return (
         <Layout title="Library">
             <div className="relative mb-8 md:mb-10 -mt-2">
                 <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
                 <input
-                    placeholder="Search"
+                    placeholder="Search courses..."
+                    onKeyUp={handleSearchKeyUp}
+                    onChange={(e) => {
+                        // Clear results immediately when field is cleared
+                        if (!e.target.value.trim()) {
+                            setSearchQuery('');
+                            setSearchResults([]);
+                        }
+                    }}
                     className="w-full max-w-xl pl-11 pr-4 py-2.5 md:py-3 bg-primary-surface/60 border border-primary/5 rounded-2xl text-sm outline-none focus:bg-white focus:border-primary/20 transition-all font-medium"
                 />
+                {searching && (
+                    <div className="absolute right-4 top-1/2 -translate-y-1/2">
+                        <div className="w-4 h-4 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
+                    </div>
+                )}
             </div>
+
+            {/* Search result heading */}
+            {isSearchMode && !searching && (
+                <p className="text-xs font-bold text-gray-400 mb-4 uppercase tracking-widest">
+                    {searchResults.length} result{searchResults.length !== 1 ? 's' : ''} for &ldquo;{searchQuery}&rdquo;
+                </p>
+            )}
 
             {loading ? (
                 <div className="flex flex-col items-center justify-center py-20 gap-4">
@@ -64,17 +120,21 @@ export const Library = () => {
                         Retry
                     </button>
                 </div>
-            ) : courses.length === 0 ? (
+            ) : displayedCourses.length === 0 ? (
                 <div className="text-center py-20">
                     <div className="w-20 h-20 bg-gray-50 rounded-full flex items-center justify-center text-gray-300 mx-auto mb-6">
                         <Book size={40} />
                     </div>
-                    <h3 className="text-xl font-bold text-gray-900 mb-2">No Courses Found</h3>
-                    <p className="text-gray-500 max-w-sm mx-auto">Start by creating your first course to see it here in the library.</p>
+                    <h3 className="text-xl font-bold text-gray-900 mb-2">
+                        {isSearchMode ? 'No courses matched your search' : 'No Courses Found'}
+                    </h3>
+                    <p className="text-gray-500 max-w-sm mx-auto">
+                        {isSearchMode ? 'Try a different keyword.' : 'Start by creating your first course to see it here in the library.'}
+                    </p>
                 </div>
             ) : (
                 <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-x-8 md:gap-y-10">
-                    {courses.map((course, i) => (
+                    {displayedCourses.map((course, i) => (
                         <div
                             key={course.id || i}
                             onClick={() => navigate(`/study/${course.id}`)}
@@ -106,9 +166,13 @@ export const Library = () => {
         </Layout>
     );
 };
+
 export const Programs = () => {
+    const navigate = useNavigate();
     const location = useLocation();
     const [path, setPath] = React.useState<string[]>([]); // Navigation stack
+    const [courses, setCourses] = React.useState<any[]>([]);
+    const [coursesLoading, setCoursesLoading] = React.useState(false);
 
     // Handle initial redirection from Dashboard
     React.useEffect(() => {
@@ -153,9 +217,33 @@ export const Programs = () => {
         }
     ];
 
+    // Fetch courses when we reach a grade level (path.length === 3)
+    React.useEffect(() => {
+        if (path.length === 3) {
+            const fetchGradeCourses = async () => {
+                setCoursesLoading(true);
+                try {
+                    // Mapping currentGrade to the database level (e.g., 'S2', 'P5')
+
+                    const grade = path[2];
+                    const data = await getCoursesByLevel(grade);
+                    setCourses(data);
+                } catch (err) {
+                    console.error('Error fetching grade courses:', err);
+                } finally {
+                    setCoursesLoading(false);
+                }
+            };
+            fetchGradeCourses();
+        }
+    }, [path]);
+
+    const { user } = useAuth();
     const [profile, setProfile] = React.useState(() => {
         const saved = localStorage.getItem('soma_profile');
-        return saved ? JSON.parse(saved) : { name: 'Swetha shankaresh', avatar: '', grade: '' };
+        const parsed = parseJsonSafe(saved, null);
+        if (parsed) return parsed;
+        return { name: user?.email?.split('@')[0] || 'User', avatar: '', grade: '', email: user?.email || '' };
     });
 
     const currentProgram = path[0] ? mainPrograms.find(p => p.id === path[0]) : null;
@@ -164,58 +252,78 @@ export const Programs = () => {
     const isEnrolledInCurrentGrade = profile.grade === currentGrade;
 
     const handleEnroll = () => {
-        if (!currentGrade) return;
+        if (!currentGrade || !user) return;
         if (profile.grade && profile.grade !== currentGrade) {
             alert(`You are currently enrolled in ${profile.grade}. You must complete it before enrolling in a new grade.`);
             return;
         }
-        const newProfile = { ...profile, grade: currentGrade };
+
+        const studentId = user.id || user.email || 'unknown_student';
+        const newProfile = { ...profile, grade: currentGrade, email: user.email };
         setProfile(newProfile);
         localStorage.setItem('soma_profile', JSON.stringify(newProfile));
 
         // Initialize student progress with courses from this grade
-        const studentProgress = {
-            email: newProfile.name || 'student',
-            courses: mockCourses.map(course => ({
-                courseId: `${currentGrade}-${course.id}`,
-                courseName: course.name,
-                progress: 0,
-                status: 'pending' as const,
-                lastUpdated: new Date().toISOString()
-            }))
-        };
-        localStorage.setItem('soma_student_progress', JSON.stringify(studentProgress));
+        // Format as an array of progress records to match API and Dashboard expectations
+        const newProgressRecords = courses.map(course => ({
+            studentId: studentId,
+            studentEmail: user.email,
+            courseId: course.id, // Use raw ID, no grade prefix
+            courseName: course.title,
+            progress: 0,
+            status: 'pending' as const,
+            lastUpdated: new Date().toISOString()
+        }));
+
+        // Get existing progress and append (or overwrite if same course)
+        const savedProgress = localStorage.getItem('soma_student_progress');
+        let allProgress = [];
+        try {
+            const parsed = savedProgress ? JSON.parse(savedProgress) : [];
+            allProgress = Array.isArray(parsed) ? parsed : [];
+        } catch (e) {
+            allProgress = [];
+        }
+
+        // Merge: remove duplicates of these specific courses if they exist
+        const newCourseIds = new Set(newProgressRecords.map(r => r.courseId));
+        const filteredOldProgress = allProgress.filter((p: any) => !newCourseIds.has(p.courseId));
+        const updatedProgress = [...filteredOldProgress, ...newProgressRecords];
+
+        localStorage.setItem('soma_student_progress', JSON.stringify(updatedProgress));
 
         // Also save enrollment records for facilitators to see
-        mockCourses.forEach(course => {
+        const savedEnrollments = localStorage.getItem('soma_enrollments');
+        let allEnrollments = [];
+        try {
+            const parsed = savedEnrollments ? JSON.parse(savedEnrollments) : [];
+            allEnrollments = Array.isArray(parsed) ? parsed : [];
+        } catch (e) {
+            allEnrollments = [];
+        }
+
+        courses.forEach(course => {
             const enrollmentRecord = {
-                studentId: newProfile.name || `student_${Date.now()}`,
-                studentName: newProfile.name || 'Student',
-                studentEmail: newProfile.email || newProfile.name || '',
-                courseId: `${currentGrade}-${course.id}`,
-                courseName: course.name,
+                studentId: studentId,
+                studentName: newProfile.name || user.email?.split('@')[0] || 'Student',
+                studentEmail: user.email || '',
+                courseId: course.id,
+                courseName: course.title,
                 enrolledAt: new Date().toISOString()
             };
-            
-            // Get existing enrollments
-            const savedEnrollments = localStorage.getItem('soma_enrollments');
-            const enrollments = savedEnrollments ? JSON.parse(savedEnrollments) : [];
-            // Add new enrollment
-            enrollments.push(enrollmentRecord);
-            localStorage.setItem('soma_enrollments', JSON.stringify(enrollments));
+
+            // Avoid duplicate enrollments for same user/course
+            if (!allEnrollments.some((e: any) => e.studentId === studentId && e.courseId === course.id)) {
+                allEnrollments.push(enrollmentRecord);
+            }
         });
+        localStorage.setItem('soma_enrollments', JSON.stringify(allEnrollments));
 
         // Trigger storage event for Dashboard
         window.dispatchEvent(new Event('storage'));
         alert(`Successfully enrolled in ${currentGrade}!`);
     };
 
-    const mockCourses = [
-        { id: 1, name: 'Mathematics', teacher: 'Emma Kent', img: 'https://images.unsplash.com/photo-1636466497217-26a8cbeaf0aa?auto=format&fit=crop&q=80&w=400' },
-        { id: 2, name: 'Biology', teacher: 'Gren Harry', img: 'https://images.unsplash.com/photo-1603126857599-f6e157fa2fe6?auto=format&fit=crop&q=80&w=400' },
-        { id: 3, name: 'Physics', teacher: 'Sarah Lex', img: 'https://images.unsplash.com/photo-1636466497217-26a8cbeaf0aa?auto=format&fit=crop&q=80&w=400' },
-        { id: 4, name: 'Chemistry', teacher: 'Hella Anna', img: 'https://images.unsplash.com/photo-1603126857599-f6e157fa2fe6?auto=format&fit=crop&q=80&w=400' },
-    ];
 
     return (
         <Layout title="Programs">
@@ -363,31 +471,46 @@ export const Programs = () => {
             )}
 
             {path.length === 3 && (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                    {mockCourses.map(course => (
-                        <div key={course.id} className="bg-white/40 backdrop-blur-md rounded-3xl p-4 border border-primary/10 hover:shadow-xl transition-all group overflow-hidden relative">
-                            {!isEnrolledInCurrentGrade && (
-                                <div className="absolute inset-0 bg-white/60 backdrop-blur-[2px] z-10 flex flex-col items-center justify-center p-6 text-center">
-                                    <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center text-gray-400 mb-3">
-                                        <Shield size={24} />
-                                    </div>
-                                    <h5 className="font-bold text-gray-900 text-sm mb-1">Locked</h5>
-                                    <p className="text-[10px] text-gray-500">Enroll in {currentGrade} to access this course</p>
-                                </div>
-                            )}
-                            <div className="aspect-video rounded-2xl overflow-hidden mb-4">
-                                <img src={course.img} className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
-                            </div>
-                            <h4 className="font-bold text-gray-900 mb-1">{course.name}</h4>
-                            <p className="text-xs text-gray-400 mb-4">Facilitator: {course.teacher}</p>
-                            <button
-                                disabled={!isEnrolledInCurrentGrade}
-                                className={`w-full py-2 rounded-xl text-xs font-bold transition-colors ${isEnrolledInCurrentGrade ? 'bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white' : 'bg-gray-100 text-gray-400 cursor-not-allowed'}`}
-                            >
-                                Open Course
-                            </button>
+                <div className="flex flex-col gap-6">
+                    {coursesLoading ? (
+                        <div className="flex items-center justify-center py-20">
+                            <div className="w-10 h-10 border-4 border-primary/20 border-t-primary rounded-full animate-spin"></div>
                         </div>
-                    ))}
+                    ) : courses.length === 0 ? (
+                        <div className="text-center py-20 bg-white/40 backdrop-blur-md rounded-3xl border border-dashed border-gray-200">
+                            <Book size={40} className="mx-auto text-gray-300 mb-4" />
+                            <h4 className="font-bold text-gray-900">No Courses Available</h4>
+                            <p className="text-xs text-gray-500">There are no courses currently listed for {currentGrade}.</p>
+                        </div>
+                    ) : (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                            {courses.map(course => (
+                                <div key={course.id} className="bg-white/40 backdrop-blur-md rounded-3xl p-4 border border-primary/10 hover:shadow-xl transition-all group overflow-hidden relative">
+                                    {!isEnrolledInCurrentGrade && (
+                                        <div className="absolute inset-0 bg-white/60 backdrop-blur-[2px] z-10 flex flex-col items-center justify-center p-6 text-center">
+                                            <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center text-gray-400 mb-3">
+                                                <Shield size={24} />
+                                            </div>
+                                            <h5 className="font-bold text-gray-900 text-sm mb-1">Locked</h5>
+                                            <p className="text-[10px] text-gray-500">Enroll in {currentGrade} to access this course</p>
+                                        </div>
+                                    )}
+                                    <div className="aspect-video rounded-2xl overflow-hidden mb-4">
+                                        <img src={course.coverPage || 'https://images.unsplash.com/photo-1636466497217-26a8cbeaf0aa?auto=format&fit=crop&q=80&w=400'} className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
+                                    </div>
+                                    <h4 className="font-bold text-gray-900 mb-1 truncate">{course.title}</h4>
+                                    <p className="text-xs text-gray-400 mb-4">Facilitator: {course.author || 'Anonymous'}</p>
+                                    <button
+                                        disabled={!isEnrolledInCurrentGrade}
+                                        onClick={() => navigate(`/study/${course.id}`)}
+                                        className={`w-full py-2 rounded-xl text-xs font-bold transition-colors ${isEnrolledInCurrentGrade ? 'bg-primary-surface text-primary hover:bg-primary hover:text-white' : 'bg-gray-100 text-gray-400 cursor-not-allowed'}`}
+                                    >
+                                        Open Course
+                                    </button>
+                                </div>
+                            ))}
+                        </div>
+                    )}
                 </div>
             )}
         </Layout>
@@ -404,7 +527,7 @@ export const Messages = () => {
     // Load profile to get current enrolled grade
     const [profile] = React.useState(() => {
         const saved = localStorage.getItem('soma_profile');
-        return saved ? JSON.parse(saved) : { grade: '' };
+        return parseJsonSafe(saved, { grade: '' });
     });
 
     const [contacts, setContacts] = React.useState([
@@ -666,13 +789,14 @@ export const Settings = () => {
     // User profile state
     const [profile, setProfile] = React.useState(() => {
         const saved = localStorage.getItem('soma_profile');
-        if (saved) return JSON.parse(saved);
+        const parsed = parseJsonSafe(saved, null);
+        if (parsed) return parsed;
         return {
-            name: user?.email.split('@')[0] || 'User',
+            name: user?.email?.split('@')[0] || 'User',
             email: user?.email || '',
             phone: '',
-            avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=crop&q=80&w=200',
-            grade: 'S2'
+            avatar: '',
+            grade: ''
         };
     });
 
@@ -705,11 +829,11 @@ export const Settings = () => {
     // Notification settings state
     const [notifications, setNotifications] = React.useState(() => {
         const saved = localStorage.getItem('soma_notifications');
-        return saved ? JSON.parse(saved) : {
+        return parseJsonSafe(saved, {
             emailAlerts: true,
             pushNotifications: true,
             weeklyReports: false
-        };
+        });
     });
 
     React.useEffect(() => {
@@ -764,7 +888,7 @@ export const Settings = () => {
             <Layout title="Personal Information">
                 <div className="max-w-xl">
                     <button onClick={() => setActiveSection('main')} className="flex items-center gap-2 text-gray-400 hover:text-primary mb-8 font-bold transition-colors">
-                        <ArrowLeft size={16} /> Back to Settings
+                        <ArrowLeft size={16} /> Back to Profile
                     </button>
                     <form onSubmit={handleProfileSubmit} className="space-y-6">
                         <div className="space-y-2">
@@ -871,7 +995,7 @@ export const Settings = () => {
             <Layout title="Security">
                 <div className="max-w-xl">
                     <button onClick={() => setActiveSection('main')} className="flex items-center gap-2 text-gray-400 hover:text-primary mb-8 font-bold transition-colors">
-                        <ArrowLeft size={16} /> Back to Settings
+                        <ArrowLeft size={16} /> Back to Profile
                     </button>
                     <form onSubmit={handlePasswordSubmit} className="space-y-6">
                         <div className="space-y-2">
@@ -916,7 +1040,7 @@ export const Settings = () => {
             <Layout title="Notifications">
                 <div className="max-w-xl">
                     <button onClick={() => setActiveSection('main')} className="flex items-center gap-2 text-gray-400 hover:text-primary mb-8 font-bold transition-colors">
-                        <ArrowLeft size={16} /> Back to Settings
+                        <ArrowLeft size={16} /> Back to Profile
                     </button>
                     <div className="space-y-4">
                         {[
@@ -944,11 +1068,16 @@ export const Settings = () => {
     }
 
     return (
-        <Layout title="Settings">
+        <Layout title="Profile">
             <div className="max-w-2xl mx-auto md:mx-0">
                 <div className="flex flex-col md:flex-row items-center gap-6 mb-8 md:mb-10 pb-8 md:pb-10 border-b border-gray-100 text-center md:text-left">
                     <div className="relative">
-                        <img className="w-20 h-20 md:w-24 md:h-24 rounded-2xl md:rounded-3xl object-cover" src={profile.avatar} alt="Profile" />
+                        <div className="w-20 h-20 md:w-24 md:h-24 rounded-2xl md:rounded-3xl overflow-hidden bg-primary/10 flex items-center justify-center border border-primary/10">
+                            {profile.avatar
+                                ? <img className="w-full h-full object-cover" src={profile.avatar} alt="Profile" />
+                                : <span className="text-3xl font-black text-primary uppercase">{profile.name?.charAt(0) || 'U'}</span>
+                            }
+                        </div>
                         <button className="absolute -bottom-2 -right-2 p-1.5 md:p-2 bg-white rounded-lg md:rounded-xl shadow-lg border border-gray-100 text-primary">
                             <User size={14} className="md:w-4 md:h-4" />
                         </button>

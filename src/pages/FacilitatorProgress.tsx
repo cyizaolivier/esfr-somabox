@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react'
 import DashboardLayout from '../components/DashboardLayout'
 import { TrendingUp, Search, BookOpen, Users, CheckCircle } from 'lucide-react'
 import { getAllProgress } from '../api/progress.api'
-import { getAllCourses, getMyCourses } from '../api/course.api'
+import { getAllCourses, getMyCourses, getAllStudents } from '../api/course.api'
+import { parseJsonSafe } from '../utils/storage'
 
 interface StudentProgress {
   studentId: string
@@ -28,21 +29,21 @@ export const FacilitatorProgress = () => {
     const loadData = async () => {
       try {
         setLoading(true)
-        
-        // Load facilitator's courses first
-        let facilitatorCourseIds: string[] = []
+
+        // Load facilitator's courses — kept in LOCAL variable so it's available
+        // synchronously when we map progress records below (React state is async)
+        let myCoursesData: any[] = []
         try {
-          const myCoursesData = await getMyCourses()
-          setCourses(myCoursesData || [])
-          facilitatorCourseIds = (myCoursesData || []).map((c: any) => c.id)
+          myCoursesData = await getMyCourses()
         } catch (err) {
-          console.error('Failed to fetch courses:', err)
-          const allCoursesData = await getAllCourses()
-          setCourses(allCoursesData || [])
-          facilitatorCourseIds = (allCoursesData || []).map((c: any) => c.id)
+          console.error('Failed to fetch my courses, falling back to all courses:', err)
+          try { myCoursesData = await getAllCourses() } catch { }
         }
-        
-        // Load progress data using new API
+        setCourses(myCoursesData)
+        const facilitatorCourseIds = new Set(myCoursesData.map((c: any) => c.id))
+        const courseById = new Map(myCoursesData.map((c: any) => [c.id, c]))
+
+        // Load progress data from backend
         const progress = await getAllProgress()
         console.log('Progress data:', progress)
         
@@ -139,13 +140,78 @@ export const FacilitatorProgress = () => {
             }
             
             studentProgress.courses.push({
+
+        // Build student lookup from API + localStorage fallbacks
+        let apiStudents: any[] = []
+        try {
+          apiStudents = await getAllStudents()
+        } catch (err) {
+          console.error('getAllStudents failed, relying on localStorage:', err)
+        }
+        const localUsers = parseJsonSafe<any[]>(localStorage.getItem('soma_users'), [])
+        const localEnrollments = parseJsonSafe<any[]>(localStorage.getItem('soma_enrollments'), [])
+
+        // Build a unified student info map (id/email → {name, email})
+        const studentLookup = new Map<string, { name: string; email: string; joinDate: string }>()
+        const addToLookup = (id: string, name: string, email: string, joinDate = '') => {
+          if (!id) return
+          const entry = { name, email, joinDate }
+          studentLookup.set(id, entry)
+          studentLookup.set(id.toLowerCase(), entry)
+          if (email) {
+            studentLookup.set(email, entry)
+            studentLookup.set(email.toLowerCase(), entry)
+          }
+        }
+        for (const s of apiStudents) {
+          const id = String(s.id || s._id || s.studentId || s.userId || '')
+          const name = s.name ||
+            (s.firstName ? `${s.firstName} ${s.lastName || ''}`.trim() : '') ||
+            s.username ||
+            s.email?.split('@')[0] ||
+            'Student'
+          addToLookup(id, name, s.email || '', s.createdAt || '')
+        }
+        for (const u of localUsers) {
+          const id = String(u.id || u._id || u.email || '')
+          addToLookup(id, u.name || u.email?.split('@')[0] || 'Student', u.email || '', u.createdAt || '')
+        }
+        for (const e of localEnrollments) {
+          const id = String(e.studentId || e.studentEmail || '')
+          addToLookup(id, e.studentName || e.studentEmail?.split('@')[0] || 'Student', e.studentEmail || '', e.enrolledAt || '')
+        }
+
+        const resolve = (id: string) => {
+          const target = String(id).toLowerCase().trim()
+          return studentLookup.get(target) || null
+        }
+
+        // Group progress by student
+        const progressMap = new Map<string, any>()
+
+        if (Array.isArray(progress) && progress.length > 0) {
+          for (const p of progress) {
+            if (facilitatorCourseIds.size > 0 && !facilitatorCourseIds.has(p.courseId)) continue
+            const studentId = String(p.studentId)
+            if (!progressMap.has(studentId)) {
+              const info = resolve(studentId)
+              progressMap.set(studentId, {
+                studentId,
+                email: info?.email || (studentId.includes('@') ? studentId : ''),
+                name: info?.name || (studentId.includes('@') ? studentId.split('@')[0] : 'Student'),
+                courses: []
+              })
+            }
+            const sp = progressMap.get(studentId)
+            const courseInfo = courseById.get(p.courseId)
+            sp.courses.push({
               courseId: p.courseId,
               courseName: courseInfo?.title || courseInfo?.name || 'Unknown Course',
               progress: p.progress_percentage ?? p.progress ?? 0,
               status: p.status || (p.progress_percentage === 100 || p.progress === 100 ? 'completed' : 'in-progress'),
               lastUpdated: p.updatedAt || p.lastUpdated || new Date().toISOString()
             })
-          })
+          }
         }
         
         // Also add students who are enrolled in facilitator's courses but have no progress yet
@@ -179,6 +245,37 @@ export const FacilitatorProgress = () => {
         
         const filteredProgress = Array.from(progressMap.values())
         setProgressData(filteredProgress)
+
+        // Also pick up enrolled-but-not-started students from soma_enrollments
+        for (const e of localEnrollments) {
+          if (!e.courseId || !e.studentId) continue
+          if (facilitatorCourseIds.size > 0 && !facilitatorCourseIds.has(e.courseId)) continue
+          const studentId = String(e.studentId || e.studentEmail || '')
+          if (!progressMap.has(studentId)) {
+            const info = resolve(studentId)
+            progressMap.set(studentId, {
+              studentId,
+              email: e.studentEmail || info?.email || '',
+              name: e.studentName || info?.name || (studentId.includes('@') ? studentId.split('@')[0] : 'Student'),
+              courses: []
+            })
+          }
+          const sp = progressMap.get(studentId)!
+          if (!sp.courses.find((c: any) => c.courseId === e.courseId)) {
+            const courseInfo = courseById.get(e.courseId)
+            sp.courses.push({
+              courseId: e.courseId,
+              courseName: courseInfo?.title || e.courseName || 'Unknown Course',
+              progress: 0,
+              status: 'pending',
+              lastUpdated: e.enrolledAt || new Date().toISOString()
+            })
+          }
+          if (e.studentEmail && !sp.email) sp.email = e.studentEmail
+          if (e.studentName && sp.name === 'Student') sp.name = e.studentName
+        }
+
+        setProgressData(Array.from(progressMap.values()))
       } catch (error) {
         console.error('Failed to load progress data:', error)
       } finally {
@@ -203,7 +300,7 @@ export const FacilitatorProgress = () => {
   const filteredStudents = progressData.filter(student => {
     const searchTarget = `${student.name} ${student.email}`.toLowerCase()
     const matchesSearch = searchTarget.includes(searchTerm.toLowerCase())
-    
+
     let matchesFilter = true
     if (filterProgress === 'completed') {
       matchesFilter = student.courses?.every((c: any) => c.progress === 100)
@@ -212,7 +309,7 @@ export const FacilitatorProgress = () => {
     } else if (filterProgress === 'not_started') {
       matchesFilter = student.courses?.every((c: any) => c.progress === 0)
     }
-    
+
     return matchesSearch && matchesFilter
   })
 
@@ -301,41 +398,37 @@ export const FacilitatorProgress = () => {
           <div className="flex gap-2">
             <button
               onClick={() => setFilterProgress('all')}
-              className={`px-4 py-2 rounded-xl font-bold text-sm transition-all ${
-                filterProgress === 'all' 
-                  ? 'bg-primary text-white' 
-                  : 'bg-white text-gray-600 hover:bg-gray-50'
-              }`}
+              className={`px-4 py-2 rounded-xl font-bold text-sm transition-all ${filterProgress === 'all'
+                ? 'bg-primary text-white'
+                : 'bg-white text-gray-600 hover:bg-gray-50'
+                }`}
             >
               All
             </button>
             <button
               onClick={() => setFilterProgress('completed')}
-              className={`px-4 py-2 rounded-xl font-bold text-sm transition-all ${
-                filterProgress === 'completed' 
-                  ? 'bg-green-500 text-white' 
-                  : 'bg-white text-gray-600 hover:bg-gray-50'
-              }`}
+              className={`px-4 py-2 rounded-xl font-bold text-sm transition-all ${filterProgress === 'completed'
+                ? 'bg-green-500 text-white'
+                : 'bg-white text-gray-600 hover:bg-gray-50'
+                }`}
             >
               Completed
             </button>
             <button
               onClick={() => setFilterProgress('in_progress')}
-              className={`px-4 py-2 rounded-xl font-bold text-sm transition-all ${
-                filterProgress === 'in_progress' 
-                  ? 'bg-blue-500 text-white' 
-                  : 'bg-white text-gray-600 hover:bg-gray-50'
-              }`}
+              className={`px-4 py-2 rounded-xl font-bold text-sm transition-all ${filterProgress === 'in_progress'
+                ? 'bg-blue-500 text-white'
+                : 'bg-white text-gray-600 hover:bg-gray-50'
+                }`}
             >
               In Progress
             </button>
             <button
               onClick={() => setFilterProgress('not_started')}
-              className={`px-4 py-2 rounded-xl font-bold text-sm transition-all ${
-                filterProgress === 'not_started' 
-                  ? 'bg-gray-500 text-white' 
-                  : 'bg-white text-gray-600 hover:bg-gray-50'
-              }`}
+              className={`px-4 py-2 rounded-xl font-bold text-sm transition-all ${filterProgress === 'not_started'
+                ? 'bg-gray-500 text-white'
+                : 'bg-white text-gray-600 hover:bg-gray-50'
+                }`}
             >
               Not Started
             </button>
@@ -353,8 +446,8 @@ export const FacilitatorProgress = () => {
             <TrendingUp size={48} className="mx-auto text-gray-300 mb-4" />
             <h3 className="text-lg font-bold text-gray-700 mb-2">No Progress Data</h3>
             <p className="text-gray-500">
-              {searchTerm || filterProgress !== 'all' 
-                ? 'No students match your filters' 
+              {searchTerm || filterProgress !== 'all'
+                ? 'No students match your filters'
                 : 'No student progress data available yet'}
             </p>
           </div>
@@ -412,8 +505,8 @@ export const FacilitatorProgress = () => {
                             </div>
                             <div className="flex items-center gap-2">
                               <div className="flex-1 h-2 bg-gray-200 rounded-full overflow-hidden">
-                                <div 
-                                  className={`h-full rounded-full ${getProgressBg(course.progress)}`} 
+                                <div
+                                  className={`h-full rounded-full ${getProgressBg(course.progress)}`}
                                   style={{ width: `${course.progress || 0}%` }}
                                 />
                               </div>

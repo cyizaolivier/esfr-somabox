@@ -7,6 +7,7 @@ console.log('Using backend URL:', BACKEND_URL);
 
 export const api = axios.create({
     baseURL: `http://${BACKEND_URL}/api`,
+    timeout: 8000, // 8 seconds — prevents 30s hangs when backend is unreachable
 })
 
 api.interceptors.request.use((config) => {

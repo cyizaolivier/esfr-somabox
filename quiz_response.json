@@ -1,0 +1,47 @@
+﻿[
+    {
+        "question":  "The local coffee shop is the heart of the ____________ on a Saturday morning.?",
+        "answer":  "neighborhood",
+        "distractors":  [
+                            "proximity",
+                            "gold coast",
+                            "neighbor"
+                        ]
+    },
+    {
+        "question":  "As soon as you step through the door, the rich aroma of roasted beans and sweet ____________ rolls wraps around you like a warm blanket.?",
+        "answer":  "cinnamon",
+        "distractors":  [
+                            "neighborhood",
+                            "cinnamon bark",
+                            "bark"
+                        ]
+    },
+    {
+        "question":  "Groups of friends chatter loudly over the hiss of the espresso machine, while solo readers tuck ____________ into velvet armchairs with their noses buried in books.?",
+        "answer":  "themselves",
+        "distractors":  [
+                            "cinnamon",
+                            "neighborhood",
+                            "illuminating"
+                        ]
+    },
+    {
+        "question":  "Sunlight streams through the tall front windows, ____________ the swirling steam rising from ceramic mugs.?",
+        "answer":  "illuminating",
+        "distractors":  [
+                            "enlightening",
+                            "inform",
+                            "informative"
+                        ]
+    },
+    {
+        "question":  "Despite the busy crowd, there is a sense of calm ____________ that makes the shop feel like a second home to everyone inside?",
+        "answer":  "productivity",
+        "distractors":  [
+                            "fecundity",
+                            "generative",
+                            "fruitfulness"
+                        ]
+    }
+]
