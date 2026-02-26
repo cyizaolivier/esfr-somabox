@@ -45,6 +45,101 @@ export const FacilitatorProgress = () => {
 
         // Load progress data from backend
         const progress = await getAllProgress()
+        console.log('Progress data:', progress)
+        
+        // Get students from localStorage to get email/name
+        const savedUsers = localStorage.getItem('soma_users')
+        const students = savedUsers ? JSON.parse(savedUsers) : []
+        
+        // Get enrollments for student names
+        const savedEnrollments = localStorage.getItem('soma_enrollments')
+        const enrollments = savedEnrollments ? JSON.parse(savedEnrollments) : []
+        console.log('Students from storage:', students)
+        console.log('Courses:', courses)
+        console.log('Enrollments:', enrollments)
+        
+        // Create a map of all known students for quick lookup
+        const studentMap = new Map()
+        
+        // Add from users storage
+        students.forEach((s: any) => {
+          if (s.email) {
+            studentMap.set(s.email.toLowerCase(), { name: s.name, email: s.email, id: s.id })
+          }
+          if (s.id) {
+            studentMap.set(s.id, { name: s.name, email: s.email, id: s.id })
+          }
+        })
+        
+        // Add from enrollments
+        enrollments.forEach((e: any) => {
+          if (e.studentEmail && !studentMap.has(e.studentEmail.toLowerCase())) {
+            studentMap.set(e.studentEmail.toLowerCase(), { name: e.studentName, email: e.studentEmail, id: e.studentId })
+          }
+          if (e.studentId && !studentMap.has(e.studentId)) {
+            studentMap.set(e.studentId, { name: e.studentName, email: e.studentEmail, id: e.studentId })
+          }
+        })
+        console.log('Student map:', Array.from(studentMap.entries()))
+        
+        // Group progress by student and filter by facilitator's courses
+        const progressMap = new Map()
+        
+        if (progress && progress.length > 0 && facilitatorCourseIds.length > 0) {
+          progress.forEach((p: any) => {
+            // Only include courses that belong to this facilitator
+            if (!facilitatorCourseIds.includes(p.courseId)) {
+              return
+            }
+            
+            const studentId = p.studentId
+            if (!progressMap.has(studentId)) {
+              // First try to find in enrollments (has studentName)
+              let enrollmentInfo = enrollments.find((e: any) => 
+                e.studentId === studentId || 
+                e.studentEmail === studentId
+              )
+              
+              // Then try users storage
+              let userInfo = students.find((s: any) => s.id === studentId)
+              if (!userInfo) {
+                // Try to find by email if id doesn't match
+                userInfo = students.find((s: any) => s.email?.toLowerCase() === studentId?.toLowerCase())
+              }
+              
+              // Use the studentMap for quick lookup
+              const mappedStudent = studentMap.get(studentId?.toLowerCase()) || 
+                                   studentMap.get(studentId) || 
+                                   Array.from(studentMap.values()).find((s: any) => s.email?.toLowerCase() === studentId?.toLowerCase())
+              
+              const studentName = mappedStudent?.name || enrollmentInfo?.studentName || userInfo?.name || studentId?.split('@')[0] || 'Student'
+              const studentEmail = mappedStudent?.email || enrollmentInfo?.studentEmail || userInfo?.email || (studentId?.includes('@') ? studentId : `${studentId?.slice(0, 8)}@example.com`)
+              
+              progressMap.set(studentId, {
+                studentId: studentId,
+                email: studentEmail,
+                name: studentName,
+                courses: []
+              })
+            }
+            
+            const studentProgress = progressMap.get(studentId)
+            // Find course name - check multiple possible ID fields and sources
+            let courseInfo = courses.find((c: any) => 
+              c.id === p.courseId || 
+              c._id === p.courseId || 
+              c.courseId === p.courseId
+            )
+            
+            // Also check enrollments for course name
+            if (!courseInfo?.title && !courseInfo?.name) {
+              const enrollmentCourse = enrollments.find((e: any) => e.courseId === p.courseId)
+              if (enrollmentCourse?.courseName) {
+                courseInfo = { title: enrollmentCourse.courseName }
+              }
+            }
+            
+            studentProgress.courses.push({
 
         // Build student lookup from API + localStorage fallbacks
         let apiStudents: any[] = []
@@ -111,13 +206,45 @@ export const FacilitatorProgress = () => {
             const courseInfo = courseById.get(p.courseId)
             sp.courses.push({
               courseId: p.courseId,
-              courseName: courseInfo?.title || 'Unknown Course',
-              progress: p.progress_percentage || 0,
-              status: p.status || (p.progress_percentage === 100 ? 'completed' : 'in-progress'),
-              lastUpdated: p.updatedAt || new Date().toISOString()
+              courseName: courseInfo?.title || courseInfo?.name || 'Unknown Course',
+              progress: p.progress_percentage ?? p.progress ?? 0,
+              status: p.status || (p.progress_percentage === 100 || p.progress === 100 ? 'completed' : 'in-progress'),
+              lastUpdated: p.updatedAt || p.lastUpdated || new Date().toISOString()
             })
           }
         }
+        
+        // Also add students who are enrolled in facilitator's courses but have no progress yet
+        if (facilitatorCourseIds.length > 0) {
+          enrollments.forEach((e: any) => {
+            // Only include enrollments for facilitator's courses
+            if (!facilitatorCourseIds.includes(e.courseId)) {
+              return
+            }
+            
+            const studentId = e.studentId || e.studentEmail
+            
+            // Only add if not already in progressMap
+            if (studentId && !progressMap.has(studentId)) {
+              const mappedStudent = studentMap.get(studentId?.toLowerCase()) || 
+                                   studentMap.get(studentId) || 
+                                   Array.from(studentMap.values()).find((s: any) => s.email?.toLowerCase() === studentId?.toLowerCase())
+              
+              const studentName = mappedStudent?.name || e.studentName || studentId?.split('@')[0] || 'Student'
+              const studentEmail = mappedStudent?.email || e.studentEmail || (studentId?.includes('@') ? studentId : '')
+              
+              progressMap.set(studentId, {
+                studentId: studentId,
+                email: studentEmail,
+                name: studentName,
+                courses: []
+              })
+            }
+          })
+        }
+        
+        const filteredProgress = Array.from(progressMap.values())
+        setProgressData(filteredProgress)
 
         // Also pick up enrolled-but-not-started students from soma_enrollments
         for (const e of localEnrollments) {
