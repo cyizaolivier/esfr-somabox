@@ -1,11 +1,10 @@
 import React from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
-import { 
-  LayoutDashboard, 
-  Library, 
-  BookOpen, 
-  MessageSquare, 
-  Settings, 
+import {
+  LayoutDashboard,
+  Library,
+  BookOpen,
+  MessageSquare,
   LogOut,
   X,
   UserPlus,
@@ -14,7 +13,8 @@ import {
   Users,
   TrendingUp,
   ListTodo,
-  GraduationCap
+  GraduationCap,
+  UserCircle
 } from 'lucide-react';
 import { useAuth } from '../auth';
 
@@ -42,7 +42,7 @@ const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
           { icon: GraduationCap, label: 'Enrollment Dashboard', path: '/admin/enrollment' },
           { icon: UserPlus, label: 'Add Facilitator', path: '/admin/add-facilitator' },
           { icon: ShieldPlus, label: 'Add Admin', path: '/admin/add-admin' },
-          { icon: Settings, label: 'Settings', path: '/settings' },
+          { icon: UserCircle, label: 'Profile', path: '/settings' },
         ];
       case 'Facilitator':
         return [
@@ -51,7 +51,7 @@ const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
           { icon: Users, label: 'Students', path: '/facilitator/students' },
           { icon: TrendingUp, label: 'Progress Tracking', path: '/facilitator/progress' },
           { icon: ListTodo, label: 'Messages', path: '/facilitator/messages' },
-          { icon: Settings, label: 'Settings', path: '/settings' },
+          { icon: UserCircle, label: 'Profile', path: '/settings' },
         ];
       default:
         return [
@@ -59,7 +59,7 @@ const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
           { icon: Library, label: 'Library', path: '/library' },
           { icon: BookOpen, label: 'Programs', path: '/programs' },
           { icon: MessageSquare, label: 'Messages', path: '/messages' },
-          { icon: Settings, label: 'Settings', path: '/settings' },
+          { icon: UserCircle, label: 'Profile', path: '/settings' },
         ];
     }
   };
@@ -70,7 +70,7 @@ const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
     <>
       {/* Mobile Overlay */}
       {isOpen && (
-        <div 
+        <div
           className="fixed inset-0 bg-black/50 z-40 lg:hidden backdrop-blur-sm transition-opacity"
           onClick={onClose}
         />
@@ -86,17 +86,17 @@ const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
         <div className="flex items-center justify-between px-4 mb-12">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 flex items-center justify-center">
-                <svg viewBox="0 0 40 40" className="w-8 h-8 fill-primary">
-                    <path d="M20 5 L35 12.5 L35 27.5 L20 35 L5 27.5 L5 12.5 Z" className="opacity-20" />
-                    <path d="M20 5 L35 12.5 L20 20 L5 12.5 Z" />
-                    <path d="M5 15 L20 22.5 L35 15 L35 20 L20 27.5 L5 20 Z" className="opacity-80" />
-                    <path d="M5 22.5 L20 30 L35 22.5 L35 27.5 L20 35 L5 27.5 Z" className="opacity-60" />
-                </svg>
+              <svg viewBox="0 0 40 40" className="w-8 h-8 fill-primary">
+                <path d="M20 5 L35 12.5 L35 27.5 L20 35 L5 27.5 L5 12.5 Z" className="opacity-20" />
+                <path d="M20 5 L35 12.5 L20 20 L5 12.5 Z" />
+                <path d="M5 15 L20 22.5 L35 15 L35 20 L20 27.5 L5 20 Z" className="opacity-80" />
+                <path d="M5 22.5 L20 30 L35 22.5 L35 27.5 L20 35 L5 27.5 Z" className="opacity-60" />
+              </svg>
             </div>
             <span className="text-xl font-bold text-primary">SomaBox</span>
           </div>
-          
-          <button 
+
+          <button
             onClick={onClose}
             className="lg:hidden p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-primary-surface/60"
           >
@@ -111,10 +111,9 @@ const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
               to={item.path}
               onClick={() => onClose?.()}
               className={({ isActive }: { isActive: boolean }) =>
-                `flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${
-                  isActive
-                    ? 'bg-primary text-white font-semibold shadow-sm'
-                    : 'text-gray-500 hover:bg-primary-surface/60'
+                `flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${isActive
+                  ? 'bg-primary text-white font-semibold shadow-sm'
+                  : 'text-gray-500 hover:bg-primary-surface/60'
                 }`
               }
             >

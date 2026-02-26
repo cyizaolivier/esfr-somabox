@@ -9,6 +9,7 @@ import { EnrollmentDashboard } from './pages/EnrollmentDashboard'
 import { FacilitatorDashboard } from './pages/FacilitatorDashboard'
 import FacilitatorStudents from './pages/FacilitatorStudents'
 import FacilitatorProgress from './pages/FacilitatorProgress'
+import FacilitatorMessages from './pages/FacilitatorMessages'
 import { Library, Programs, Messages, Settings } from './pages/SubPages'
 import StudyCourse from './pages/StudyCourse'
 import StudyTopic from './pages/StudyTopic'
@@ -133,6 +134,14 @@ export default function App() {
                 </RoleRoute>
               }
             />
+            <Route
+              path="/facilitator/messages"
+              element={
+                <RoleRoute allowedRoles={['Facilitator']}>
+                  <FacilitatorMessages />
+                </RoleRoute>
+              }
+            />
 
             {/* Editor Routes */}
             <Route
@@ -220,8 +229,8 @@ export default function App() {
               }
             />
 
-            <Route path="/" element={<Navigate to="/dashboard" replace />} />
-            <Route path="*" element={<Navigate to="/dashboard" replace />} />
+            <Route path="/" element={<Navigate to="/signin" replace />} />
+            <Route path="*" element={<Navigate to="/signin" replace />} />
           </Routes>
         </EditorProvider>
       </CourseProvider>

@@ -12,6 +12,7 @@ import nurseryStudentsImg from '../assets/nursery students.jpg'
 import primaryStudentsImg from '../assets/primary students.jpg'
 import secondaryStudentsImg from '../assets/secondary students.jpg'
 import universityStudentsImg from '../assets/University students.jpg'
+import { parseJsonSafe } from '../utils/storage'
 
 const Layout = DashboardLayout;
 
@@ -29,8 +30,8 @@ export const Library = () => {
     React.useEffect(() => {
         const fetchCourses = async () => {
             try {
-                const response = await getAllCourses();
-                setCourses(response.data);
+                const data = await getAllCourses();
+                setCourses(data);
             } catch (err) {
                 setError('Failed to load courses');
                 console.error('Error fetching courses:', err);
@@ -57,8 +58,8 @@ export const Library = () => {
         debounceRef.current = setTimeout(async () => {
             setSearching(true);
             try {
-                const response = await searchCourses(query);
-                setSearchResults(response.data ?? []);
+                const data = await searchCourses(query);
+                setSearchResults(data ?? []);
             } catch (err) {
                 console.error('Search error:', err);
                 setSearchResults([]);
@@ -225,8 +226,8 @@ export const Programs = () => {
                     // Mapping currentGrade to the database level (e.g., 'S2', 'P5')
 
                     const grade = path[2];
-                    const response = await getCoursesByLevel(grade);
-                    setCourses(response.data);
+                    const data = await getCoursesByLevel(grade);
+                    setCourses(data);
                 } catch (err) {
                     console.error('Error fetching grade courses:', err);
                 } finally {
@@ -237,9 +238,12 @@ export const Programs = () => {
         }
     }, [path]);
 
+    const { user } = useAuth();
     const [profile, setProfile] = React.useState(() => {
         const saved = localStorage.getItem('soma_profile');
-        return saved ? JSON.parse(saved) : { name: 'Swetha shankaresh', avatar: '', grade: '' };
+        const parsed = parseJsonSafe(saved, null);
+        if (parsed) return parsed;
+        return { name: user?.email?.split('@')[0] || 'User', avatar: '', grade: '', email: user?.email || '' };
     });
 
     const currentProgram = path[0] ? mainPrograms.find(p => p.id === path[0]) : null;
@@ -248,46 +252,72 @@ export const Programs = () => {
     const isEnrolledInCurrentGrade = profile.grade === currentGrade;
 
     const handleEnroll = () => {
-        if (!currentGrade) return;
+        if (!currentGrade || !user) return;
         if (profile.grade && profile.grade !== currentGrade) {
             alert(`You are currently enrolled in ${profile.grade}. You must complete it before enrolling in a new grade.`);
             return;
         }
-        const newProfile = { ...profile, grade: currentGrade };
+
+        const studentId = user.id || user.email || 'unknown_student';
+        const newProfile = { ...profile, grade: currentGrade, email: user.email };
         setProfile(newProfile);
         localStorage.setItem('soma_profile', JSON.stringify(newProfile));
 
         // Initialize student progress with courses from this grade
-        const studentProgress = {
-            email: newProfile.name || 'student',
-            courses: courses.map(course => ({
-                courseId: `${currentGrade}-${course.id}`,
-                courseName: course.title,
-                progress: 0,
-                status: 'pending' as const,
-                lastUpdated: new Date().toISOString()
-            }))
-        };
-        localStorage.setItem('soma_student_progress', JSON.stringify(studentProgress));
+        // Format as an array of progress records to match API and Dashboard expectations
+        const newProgressRecords = courses.map(course => ({
+            studentId: studentId,
+            studentEmail: user.email,
+            courseId: course.id, // Use raw ID, no grade prefix
+            courseName: course.title,
+            progress: 0,
+            status: 'pending' as const,
+            lastUpdated: new Date().toISOString()
+        }));
+
+        // Get existing progress and append (or overwrite if same course)
+        const savedProgress = localStorage.getItem('soma_student_progress');
+        let allProgress = [];
+        try {
+            const parsed = savedProgress ? JSON.parse(savedProgress) : [];
+            allProgress = Array.isArray(parsed) ? parsed : [];
+        } catch (e) {
+            allProgress = [];
+        }
+
+        // Merge: remove duplicates of these specific courses if they exist
+        const newCourseIds = new Set(newProgressRecords.map(r => r.courseId));
+        const filteredOldProgress = allProgress.filter((p: any) => !newCourseIds.has(p.courseId));
+        const updatedProgress = [...filteredOldProgress, ...newProgressRecords];
+
+        localStorage.setItem('soma_student_progress', JSON.stringify(updatedProgress));
 
         // Also save enrollment records for facilitators to see
-        mockCourses.forEach(course => {
+        const savedEnrollments = localStorage.getItem('soma_enrollments');
+        let allEnrollments = [];
+        try {
+            const parsed = savedEnrollments ? JSON.parse(savedEnrollments) : [];
+            allEnrollments = Array.isArray(parsed) ? parsed : [];
+        } catch (e) {
+            allEnrollments = [];
+        }
+
+        courses.forEach(course => {
             const enrollmentRecord = {
-                studentId: newProfile.name || `student_${Date.now()}`,
-                studentName: newProfile.name || 'Student',
-                studentEmail: newProfile.email || newProfile.name || '',
-                courseId: `${currentGrade}-${course.id}`,
-                courseName: course.name,
+                studentId: studentId,
+                studentName: newProfile.name || user.email?.split('@')[0] || 'Student',
+                studentEmail: user.email || '',
+                courseId: course.id,
+                courseName: course.title,
                 enrolledAt: new Date().toISOString()
             };
-            
-            // Get existing enrollments
-            const savedEnrollments = localStorage.getItem('soma_enrollments');
-            const enrollments = savedEnrollments ? JSON.parse(savedEnrollments) : [];
-            // Add new enrollment
-            enrollments.push(enrollmentRecord);
-            localStorage.setItem('soma_enrollments', JSON.stringify(enrollments));
+
+            // Avoid duplicate enrollments for same user/course
+            if (!allEnrollments.some((e: any) => e.studentId === studentId && e.courseId === course.id)) {
+                allEnrollments.push(enrollmentRecord);
+            }
         });
+        localStorage.setItem('soma_enrollments', JSON.stringify(allEnrollments));
 
         // Trigger storage event for Dashboard
         window.dispatchEvent(new Event('storage'));
@@ -497,7 +527,7 @@ export const Messages = () => {
     // Load profile to get current enrolled grade
     const [profile] = React.useState(() => {
         const saved = localStorage.getItem('soma_profile');
-        return saved ? JSON.parse(saved) : { grade: '' };
+        return parseJsonSafe(saved, { grade: '' });
     });
 
     const [contacts, setContacts] = React.useState([
@@ -759,13 +789,14 @@ export const Settings = () => {
     // User profile state
     const [profile, setProfile] = React.useState(() => {
         const saved = localStorage.getItem('soma_profile');
-        if (saved) return JSON.parse(saved);
+        const parsed = parseJsonSafe(saved, null);
+        if (parsed) return parsed;
         return {
-            name: user?.email.split('@')[0] || 'User',
+            name: user?.email?.split('@')[0] || 'User',
             email: user?.email || '',
             phone: '',
-            avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=crop&q=80&w=200',
-            grade: 'S2'
+            avatar: '',
+            grade: ''
         };
     });
 
@@ -798,11 +829,11 @@ export const Settings = () => {
     // Notification settings state
     const [notifications, setNotifications] = React.useState(() => {
         const saved = localStorage.getItem('soma_notifications');
-        return saved ? JSON.parse(saved) : {
+        return parseJsonSafe(saved, {
             emailAlerts: true,
             pushNotifications: true,
             weeklyReports: false
-        };
+        });
     });
 
     React.useEffect(() => {
@@ -857,7 +888,7 @@ export const Settings = () => {
             <Layout title="Personal Information">
                 <div className="max-w-xl">
                     <button onClick={() => setActiveSection('main')} className="flex items-center gap-2 text-gray-400 hover:text-primary mb-8 font-bold transition-colors">
-                        <ArrowLeft size={16} /> Back to Settings
+                        <ArrowLeft size={16} /> Back to Profile
                     </button>
                     <form onSubmit={handleProfileSubmit} className="space-y-6">
                         <div className="space-y-2">
@@ -964,7 +995,7 @@ export const Settings = () => {
             <Layout title="Security">
                 <div className="max-w-xl">
                     <button onClick={() => setActiveSection('main')} className="flex items-center gap-2 text-gray-400 hover:text-primary mb-8 font-bold transition-colors">
-                        <ArrowLeft size={16} /> Back to Settings
+                        <ArrowLeft size={16} /> Back to Profile
                     </button>
                     <form onSubmit={handlePasswordSubmit} className="space-y-6">
                         <div className="space-y-2">
@@ -1009,7 +1040,7 @@ export const Settings = () => {
             <Layout title="Notifications">
                 <div className="max-w-xl">
                     <button onClick={() => setActiveSection('main')} className="flex items-center gap-2 text-gray-400 hover:text-primary mb-8 font-bold transition-colors">
-                        <ArrowLeft size={16} /> Back to Settings
+                        <ArrowLeft size={16} /> Back to Profile
                     </button>
                     <div className="space-y-4">
                         {[
@@ -1037,11 +1068,16 @@ export const Settings = () => {
     }
 
     return (
-        <Layout title="Settings">
+        <Layout title="Profile">
             <div className="max-w-2xl mx-auto md:mx-0">
                 <div className="flex flex-col md:flex-row items-center gap-6 mb-8 md:mb-10 pb-8 md:pb-10 border-b border-gray-100 text-center md:text-left">
                     <div className="relative">
-                        <img className="w-20 h-20 md:w-24 md:h-24 rounded-2xl md:rounded-3xl object-cover" src={profile.avatar} alt="Profile" />
+                        <div className="w-20 h-20 md:w-24 md:h-24 rounded-2xl md:rounded-3xl overflow-hidden bg-primary/10 flex items-center justify-center border border-primary/10">
+                            {profile.avatar
+                                ? <img className="w-full h-full object-cover" src={profile.avatar} alt="Profile" />
+                                : <span className="text-3xl font-black text-primary uppercase">{profile.name?.charAt(0) || 'U'}</span>
+                            }
+                        </div>
                         <button className="absolute -bottom-2 -right-2 p-1.5 md:p-2 bg-white rounded-lg md:rounded-xl shadow-lg border border-gray-100 text-primary">
                             <User size={14} className="md:w-4 md:h-4" />
                         </button>

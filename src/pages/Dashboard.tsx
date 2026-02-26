@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../auth'
 import Sidebar from '../components/Sidebar'
-import { Bell, CheckSquare, MoreHorizontal, ClipboardList, Menu, Activity } from 'lucide-react'
+import { Bell, CheckSquare, MoreHorizontal, ClipboardList, Menu, Activity, Loader2, AlertCircle } from 'lucide-react'
 import { getStudentProgressById } from '../api/progress.api'
 import { getStudentProgress } from '../api/progress.api'
 import { getAllCourses } from '../api/course.api'
@@ -72,15 +72,25 @@ export default function Dashboard() {
         if (!studentId) {
           throw new Error('No student ID found');
         }
- 
+
         // Fetch progress and all courses to get details
-        const [progressRes, coursesRes] = await Promise.all([
+        let [studentProgressData, allCourses] = await Promise.all([
           getStudentProgress(studentId),
           getAllCourses()
         ]);
 
-        const allCourses = coursesRes.data;
-        const courses: CourseProgress[] = progressRes.data.map((item: any) => {
+        // Defensive check: if it's an object with a 'courses' property (old format), extract it
+        if (studentProgressData && !Array.isArray(studentProgressData) && (studentProgressData as any).courses) {
+          console.log('Migrating old progress object format to array');
+          studentProgressData = (studentProgressData as any).courses;
+        }
+
+        // If still not an array, default to empty
+        if (!Array.isArray(studentProgressData)) {
+          studentProgressData = [];
+        }
+
+        const courses: CourseProgress[] = studentProgressData.map((item: any) => {
           const courseDetail = allCourses.find((c: any) => c.id === item.courseId);
           return {
             courseId: item.courseId,
@@ -123,12 +133,10 @@ export default function Dashboard() {
     : 0;
 
   const chats = [
-    { id: 1, name: "Emma Kent", msg: "Hey...!", time: "12:00 AM", online: true, avatar: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?auto=format&fit=crop&q=80&w=100" },
-    { id: 2, name: "Gren Harry", msg: "Hey...!", time: "12:00 AM", online: true, avatar: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&q=80&w=100" },
-    { id: 3, name: "Sarah Lex", msg: "Hey...!", time: "12:00 AM", online: false, avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&q=80&w=100" },
-    { id: 4, name: "Hella Anna", msg: "Hey...!", time: "12:00 AM", online: false, avatar: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&q=80&w=100" },
-    { id: 5, name: "Hart Kevin", msg: "Hey...!", time: "12:00 AM", online: false, avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&q=80&w=100" },
-    { id: 6, name: "Ava Gary", msg: "Hey...!", time: "12:00 AM", online: false, avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=100" },
+    { id: 1, name: "Maximillien (Facilitator)", msg: "Welcome to English Fundamentals!", time: "9:15 AM", online: true, avatar: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=crop&q=80&w=150" },
+    { id: 2, name: "SomaBox Team", msg: "New course materials are now available.", time: "Yesterday", online: true, avatar: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&q=80&w=150" },
+    { id: 3, name: "Alice (S3 Student)", msg: "Did you find the notes for Biology?", time: "Mon", online: false, avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&q=80&w=100" },
+    { id: 4, name: "Assistant AI", msg: "You have an upcoming quiz in 2 hours.", time: "2:30 PM", online: true, avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=100" },
   ]
 
   // Get real course data from progress
@@ -150,6 +158,40 @@ export default function Dashboard() {
       chapter: c.status === 'completed' ? 'Completed' : c.status === 'in-progress' ? 'In Progress' : 'Not Started',
       progress: c.progress
     }));
+
+  // Show loading spinner while fetching progress data
+  if (studentProgress.loading) {
+    return (
+      <div className="flex min-h-screen bg-primary-surface items-center justify-center">
+        <div className="flex flex-col items-center gap-4">
+          <Loader2 size={48} className="animate-spin text-primary" />
+          <p className="text-gray-500 font-semibold">Loading your dashboard...</p>
+        </div>
+      </div>
+    )
+  }
+
+  // Show error state if fetching failed
+  if (studentProgress.error) {
+    return (
+      <div className="flex min-h-screen bg-primary-surface">
+        <Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} />
+        <main className="flex-1 flex items-center justify-center p-8">
+          <div className="flex flex-col items-center gap-4 text-center max-w-sm">
+            <AlertCircle size={48} className="text-orange-400" />
+            <h2 className="text-xl font-bold text-gray-800">Couldn't load your data</h2>
+            <p className="text-gray-500 text-sm">The server might be offline. Your progress will appear once the connection is restored.</p>
+            <button
+              onClick={() => window.location.reload()}
+              className="px-6 py-2 bg-primary text-white rounded-xl font-bold hover:opacity-90 transition-opacity"
+            >
+              Retry
+            </button>
+          </div>
+        </main>
+      </div>
+    )
+  }
 
   return (
     <div className="flex min-h-screen bg-primary-surface">
