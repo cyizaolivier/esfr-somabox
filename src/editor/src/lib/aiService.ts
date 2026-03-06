@@ -48,7 +48,7 @@ export const mockGenerateQuiz = async (text: string) => {
 export const generateRealQuiz = async (text: string) => {
     try {
         // Use the same IP/Port as the standard API
-        const BACKEND_URL = "192.168.1.86:3000";
+        const BACKEND_URL = "localhost:3000";
 
         const response = await fetch(`http://${BACKEND_URL}/api/quizzes/generate`, {
             method: 'POST',

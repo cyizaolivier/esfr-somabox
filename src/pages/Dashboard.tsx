@@ -72,24 +72,16 @@ export default function Dashboard() {
         if (!studentId) {
           throw new Error('No student ID found');
         }
-        const response = await getStudentProgressById(studentId);
-        console.log('Student progress response:', response);
-        // Get course details for proper names
-        const coursesResponse = await import('../api/course.api').then(m => m.getAllCourses());
-        const coursesMap = new Map((coursesResponse || []).map((c: any) => [c.id, c]));
-        const courses: CourseProgress[] = (response.data || response || []).map((item: any) => ({
-          courseId: item.courseId,
-          courseName: coursesMap.get(item.courseId)?.title || `Course ${item.courseId?.substring(0, 4) || 'Unknown'}`,
-          progress: item.progress_percentage ?? item.progress ?? 0,
-          status: item.status as 'completed' | 'in-progress' | 'pending',
-          lastUpdated: item.updatedAt || new Date().toISOString()
-        }));
-
-        // Fetch progress and all courses to get details
-        let [studentProgressData, allCourses] = await Promise.all([
-          getStudentProgress(studentId),
+        // Fetch progress and all courses to get details in parallel
+        const [progressResponse, allCourses] = await Promise.all([
+          getStudentProgressById(studentId),
           getAllCourses()
         ]);
+
+        console.log('Student progress info:', progressResponse);
+
+        // Extract the actual progress data from the response
+        let studentProgressData = progressResponse.data || progressResponse || [];
 
         // Defensive check: if it's an object with a 'courses' property (old format), extract it
         if (studentProgressData && !Array.isArray(studentProgressData) && (studentProgressData as any).courses) {
@@ -102,15 +94,16 @@ export default function Dashboard() {
           studentProgressData = [];
         }
 
+        // Map progress data to view model
         const courses: CourseProgress[] = studentProgressData.map((item: any) => {
           const courseDetail = allCourses.find((c: any) => c.id === item.courseId);
           return {
             courseId: item.courseId,
-            courseName: courseDetail?.title || `Course ${item.courseId.substring(0, 4)}`,
+            courseName: courseDetail?.title || `Course ${item.courseId?.substring(0, 4) || 'Unknown'}`,
             courseImage: courseDetail?.coverPage || "https://images.unsplash.com/photo-1456513080510-7bf3a84b82f8?auto=format&fit=crop&q=80&w=400",
-            progress: item.progress_percentage,
+            progress: item.progress_percentage ?? item.progress ?? 0,
             status: item.status as 'completed' | 'in-progress' | 'pending',
-            lastUpdated: new Date().toISOString()
+            lastUpdated: item.updatedAt || new Date().toISOString()
           };
         });
 

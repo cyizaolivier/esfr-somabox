@@ -1,7 +1,7 @@
 // import * as dotenv from 'dotenv';
 import axios from 'axios';
 // dotenv.config();
-const BACKEND_URL = "192.168.1.86:3000"
+const BACKEND_URL = "localhost:3000"
 
 console.log('Using backend URL:', BACKEND_URL);
 
